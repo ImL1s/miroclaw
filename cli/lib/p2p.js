@@ -75,8 +75,11 @@ async function broadcastSeed(topic, config = {}) {
             });
 
             if (res && res.success) {
-                console.log(`   📋 ${peer.id}: seed queued`);
-                return { peer, success: true };
+                const status = res.data?.auto_predict
+                    ? `🚀 ${peer.id}: prediction started`
+                    : `📋 ${peer.id}: seed queued`;
+                console.log(`   ${status}`);
+                return { peer, success: true, autoPredicting: !!res.data?.auto_predict };
             } else {
                 console.log(`   ❌ ${peer.id}: failed`);
                 return { peer, success: false, error: res?.error || 'unknown' };
