@@ -137,10 +137,11 @@ function serveInjectedHTML(res, htmlPath, simId, reportData) {
         }
 
         // Inject config and data before </head>
+        // Use JSON.stringify for all values to prevent XSS
         const injection = `
 <script>
-window.__MIROFISH_API__ = '${getBaseUrl()}';
-window.__MIROFISH_SIM_ID__ = '${simId}';
+window.__MIROFISH_API__ = ${JSON.stringify(getBaseUrl())};
+window.__MIROFISH_SIM_ID__ = ${JSON.stringify(simId)};
 ${reportData ? `window.__MIROFISH_REPORT__ = ${JSON.stringify(reportData)};` : ''}
 </script>
 `;
@@ -231,15 +232,15 @@ function generateHTML(reportData, simId) {
         () => `<script>${js}<\/script>`
     );
 
-    // Inject data
+    // Inject data (use JSON.stringify for safety)
     const injection = `
 <script>
-window.__MIROFISH_API__ = 'http://localhost:5001';
-window.__MIROFISH_SIM_ID__ = '${simId || ''}';
+window.__MIROFISH_API__ = ${JSON.stringify('http://localhost:5001')};
+window.__MIROFISH_SIM_ID__ = ${JSON.stringify(simId || '')};
 ${reportData ? `window.__MIROFISH_REPORT__ = ${JSON.stringify(reportData)};` : ''}
 </script>
 `;
-    html = html.replace('</head>', injection + '</head>');
+    html = html.replace('</head>', () => injection + '</head>');
 
     return html;
 }

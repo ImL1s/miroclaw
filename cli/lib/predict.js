@@ -194,8 +194,35 @@ async function predict(seedText, opts = {}) {
     console.log('\n📊 Step 7/7: Generating report...');
     await request('POST', '/api/report/generate', { simulation_id: simId });
 
-    // Wait for report generation
-    await new Promise(r => setTimeout(r, 5000));
+    // Wait for report generation with polling
+    let reportReady = false;
+    const maxReportWait = 10 * 60 * 1000; // 10 minutes max
+    const reportPollInterval = 5000; // 5s
+    const reportStart = Date.now();
+
+    while (!reportReady && Date.now() - reportStart < maxReportWait) {
+        await new Promise(r => setTimeout(r, reportPollInterval));
+        try {
+            const check = await request('GET', `/api/report/check/${simId}`);
+            const checkData = check.data || check;
+            if (checkData.report_status === 'completed') {
+                reportReady = true;
+            } else if (checkData.report_status === 'failed') {
+                console.error('   ❌ Report generation failed');
+                break;
+            } else {
+                const elapsed = Math.round((Date.now() - reportStart) / 1000);
+                process.stdout.write(`\r   ⏳ Generating report... ${elapsed}s`);
+            }
+        } catch {
+            // API not available yet, keep waiting
+        }
+    }
+    if (!reportReady) {
+        console.log('\n   ⚠️  Report may still be generating. Attempting to fetch...');
+    } else {
+        console.log('\r   ✅ Report generated!                    ');
+    }
 
     const report = await request('GET', `/api/report/by-simulation/${simId}`);
     const reportData = report.data || report;

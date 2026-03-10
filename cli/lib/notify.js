@@ -159,7 +159,7 @@ function escapeAppleScript(str) {
 }
 
 function escapeShell(str) {
-    return str.replace(/"/g, '\\"').replace(/\$/g, '\\$');
+    return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\$/g, '\\$').replace(/`/g, '\\`').replace(/\n/g, ' ');
 }
 
 function escapePS(str) {
