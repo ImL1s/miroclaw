@@ -90,4 +90,60 @@ function formDataUpload(path, fields, filePath, fileFieldName = 'file') {
     });
 }
 
-module.exports = { request, formDataUpload, getBaseUrl };
+// --- High-level Report API helpers ---
+
+/** Fetch report by simulation ID */
+function getReportBySimulation(simId) {
+    return request('GET', `/api/report/by-simulation/${simId}`);
+}
+
+/** Fetch report sections (incremental) */
+function getReportSections(reportId) {
+    return request('GET', `/api/report/${reportId}/sections`);
+}
+
+/** Fetch report generation progress */
+function getReportProgress(reportId) {
+    return request('GET', `/api/report/${reportId}/progress`);
+}
+
+/** Fetch agent execution log (incremental) */
+function getAgentLog(reportId, fromLine = 0) {
+    return request('GET', `/api/report/${reportId}/agent-log?from_line=${fromLine}`);
+}
+
+/** Chat with Report Agent */
+function chatWithAgent(simId, message, chatHistory = []) {
+    return request('POST', '/api/report/chat', {
+        simulation_id: simId,
+        message,
+        chat_history: chatHistory,
+    });
+}
+
+/** Interview a specific simulation Agent */
+function interviewAgent(simId, agentId, prompt) {
+    return request('POST', '/api/simulation/interview', {
+        simulation_id: simId,
+        agent_id: agentId,
+        prompt,
+    });
+}
+
+/** Check report status for a simulation */
+function checkReportStatus(simId) {
+    return request('GET', `/api/report/check/${simId}`);
+}
+
+module.exports = {
+    request,
+    formDataUpload,
+    getBaseUrl,
+    getReportBySimulation,
+    getReportSections,
+    getReportProgress,
+    getAgentLog,
+    chatWithAgent,
+    interviewAgent,
+    checkReportStatus,
+};

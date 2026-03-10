@@ -77,6 +77,45 @@ miro_claw/
 └── .env                  # 環境變數
 ```
 
+## 測試注意事項
+
+### 環境需求
+
+| 項目 | 說明 |
+|:---|:---|
+| LLM 服務 | LM Studio / Ollama / 任何 OpenAI 格式 API |
+| ZEP Cloud | 免費 tier，key 會過期需更新 |
+| Docker | AMD64 only（Apple Silicon 自動 fallback native） |
+| Native 模式 | 需 `uv` + Python 3.11 + MiroFish source |
+
+### LM Studio 注意事項
+
+- **IP 地址**：LM Studio "Serve on local network" 顯示的 IP 可能是虛擬網卡（`10.5.0.x` = Hyper-V）。用 `ipconfig` 找真正的 LAN IP（`192.168.1.x`）
+- **`response_format`**：LM Studio 不支援 `json_object` 格式，已在 `llm_client.py` 移除
+
+### 已知問題
+
+1. **Docker pull 延遲** — 每次 `serve start` 會嘗試 pull image（ARM64 會失敗後 fallback），增加 ~4 秒
+2. **短 seed text** — `predict` 自動擴展 <200 字元的輸入為 ~1100 字元結構化文檔（確保 ZEP 能提取足夠實體）
+3. **Report 非同步** — `predict` 結束時 report 可能還是 `pending`，Report Agent 在後台生成
+
+### Troubleshooting
+
+```bash
+# 確認 LLM 可達
+curl http://YOUR_LLM_IP:1234/v1/models
+
+# 確認 backend 健康
+curl http://localhost:5001/health
+
+# 查看 native 模式 PID
+cat ~/.mirofish/backend.pid
+
+# 強制清理
+pkill -f "uv run python run.py"
+rm -f ~/.mirofish/backend.pid
+```
+
 ## License
 
 MIT

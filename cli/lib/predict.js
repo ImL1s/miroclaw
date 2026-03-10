@@ -8,6 +8,7 @@ const os = require('os');
 const path = require('path');
 const { request, formDataUpload } = require('./api.js');
 const { ensureRunning } = require('./docker.js');
+const { notifyPredictionComplete } = require('./notify.js');
 
 const POLL_INTERVAL = 15000; // 15s
 const MAX_POLL_MINUTES = 60;
@@ -198,16 +199,93 @@ async function predict(seedText, opts = {}) {
 
     const report = await request('GET', `/api/report/by-simulation/${simId}`);
     const reportData = report.data || report;
-    console.log('\n' + '='.repeat(60));
-    console.log('📊 SIMULATION REPORT');
-    console.log('='.repeat(60));
-    console.log(JSON.stringify(reportData, null, 2));
-    console.log('='.repeat(60));
+
+    // Format and display report
+    const formatted = formatReport(reportData, seedText);
+    console.log(formatted);
+
+    // Save report to file
+    const reportFile = path.join(os.tmpdir(), `mirofish_report_${simId}.md`);
+    fs.writeFileSync(reportFile, formatted);
+    console.log(`\n💾 Report saved to: ${reportFile}`);
+
+    // Notification
+    const sectionCount = reportData.outline?.sections?.length || 0;
+    await notifyPredictionComplete({
+        topic: seedText,
+        simId,
+        sections: sectionCount,
+        canvasPort: opts.canvas ? (opts.canvasPort || 18790) : null,
+    });
+
     console.log(`\nSimulation ID: ${simId}`);
-    console.log('Follow-up: mirofish chat ' + simId + ' "your question"');
-    console.log('Interview: mirofish interview ' + simId + ' 0 "your question"');
+    console.log('Next steps:');
+    console.log(`  mirofish canvas ${simId}       # 🖥️  Open visual Dashboard`);
+    console.log(`  mirofish chat ${simId} "問題"   # 💬 Ask Report Agent`);
+    console.log(`  mirofish interview ${simId} 0 "問題"  # 🎤 Interview Agent`);
+
+    // Auto-open canvas if --canvas flag
+    if (opts.canvas) {
+        console.log('\n🖥️  Opening Canvas Dashboard...');
+        const { launchCanvas } = require('./canvas.js');
+        await launchCanvas(simId, { port: opts.canvasPort || 18790 });
+    }
 
     return { projectId, simId, report: reportData };
 }
 
-module.exports = { predict };
+/**
+ * Format report data into readable Markdown output
+ */
+function formatReport(reportData, topic) {
+    const lines = [];
+    const outline = reportData.outline;
+    const markdown = reportData.markdown_content;
+
+    lines.push('\n' + '═'.repeat(60));
+    lines.push('📊 MIROFISH PREDICTION REPORT');
+    lines.push('═'.repeat(60));
+
+    if (outline) {
+        lines.push('');
+        lines.push(`📌 ${outline.title || topic}`);
+        if (outline.summary) {
+            lines.push('');
+            lines.push(`   ${outline.summary}`);
+        }
+        lines.push('');
+        lines.push('─'.repeat(60));
+
+        // Section list
+        if (outline.sections && outline.sections.length > 0) {
+            lines.push('');
+            lines.push('📑 Sections:');
+            outline.sections.forEach((s, i) => {
+                lines.push(`   ${String(i + 1).padStart(2, '0')}. ${s.title}`);
+            });
+        }
+    }
+
+    // Full markdown content
+    if (markdown) {
+        lines.push('');
+        lines.push('─'.repeat(60));
+        lines.push('');
+        // Truncate if very long for terminal display
+        const maxLen = 3000;
+        if (markdown.length > maxLen) {
+            lines.push(markdown.slice(0, maxLen));
+            lines.push(`\n... (truncated, ${markdown.length} chars total)`);
+            lines.push(`Full report saved to file.`);
+        } else {
+            lines.push(markdown);
+        }
+    }
+
+    lines.push('');
+    lines.push('═'.repeat(60));
+
+    return lines.join('\n');
+}
+
+module.exports = { predict, formatReport };
