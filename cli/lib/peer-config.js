@@ -57,6 +57,14 @@ function addPeer(endpoint, label) {
     // 正規化 endpoint（移除尾部 /）
     endpoint = endpoint.replace(/\/+$/, '');
 
+    // 驗證 URL 格式
+    let parsedUrl;
+    try {
+        parsedUrl = new URL(endpoint);
+    } catch {
+        throw new Error(`Invalid endpoint URL: ${endpoint}`);
+    }
+
     // 檢查是否已存在
     const existing = peers.find(p => p.endpoint === endpoint);
     if (existing) {
@@ -65,7 +73,7 @@ function addPeer(endpoint, label) {
     }
 
     const peer = {
-        id: label || new URL(endpoint).hostname,
+        id: label || parsedUrl.hostname,
         endpoint,
         label: label || null,
         addedAt: Date.now(),

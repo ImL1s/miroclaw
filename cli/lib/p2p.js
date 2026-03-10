@@ -61,11 +61,7 @@ async function broadcastSeed(topic, config = {}) {
                 return { peer, success: false, error: 'offline' };
             }
 
-            // 觸發 peer 的推演（透過 MiroFish API）
-            // 先建立 project + ontology
-            const FormData = (await import('node:buffer')).Buffer ? null : null;
-
-            // 簡化版：直接通知 peer 開始推演
+            // 觸發 peer 的推演
             // peer 需要有 /api/p2p/predict endpoint（Phase 3.1 新增）
             const res = await peerRequest(peer, 'POST', '/api/p2p/predict', {
                 topic,
