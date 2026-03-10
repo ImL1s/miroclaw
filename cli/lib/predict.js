@@ -36,10 +36,38 @@ async function predict(seedText, opts = {}) {
     }
     console.log(`   Project ID: ${projectId}`);
 
-    // Step 2: Build knowledge graph
+    // Step 2: Build knowledge graph (async — returns task_id)
     console.log('\n🕸️  Step 2/7: Building knowledge graph...');
     const buildRes = await request('POST', '/api/graph/build', { project_id: projectId });
-    console.log('   Knowledge graph built.');
+    const buildData = buildRes.data || buildRes;
+    const buildTaskId = buildData.task_id;
+
+    if (buildTaskId) {
+        console.log(`   Build task started: ${buildTaskId}`);
+        for (let i = 0; i < 120; i++) { // max ~30min
+            await new Promise(r => setTimeout(r, 15000));
+            try {
+                const taskRes = await request('GET', `/api/graph/task/${buildTaskId}`);
+                const taskData = taskRes.data || taskRes;
+                const taskStatus = taskData.status;
+                const progress = taskData.progress || '';
+                process.stdout.write(`\r   Graph build: ${taskStatus} ${progress}%     `);
+
+                if (taskStatus === 'completed' || taskStatus === 'success') {
+                    console.log('\n   ✅ Knowledge graph built!');
+                    break;
+                }
+                if (taskStatus === 'failed' || taskStatus === 'error') {
+                    console.error(`\n   ❌ Graph build failed: ${JSON.stringify(taskData)}`);
+                    process.exit(1);
+                }
+            } catch {
+                process.stdout.write('.');
+            }
+        }
+    } else {
+        console.log('   ✅ Knowledge graph built.');
+    }
 
     // Step 3: Create simulation
     console.log('\n🎯 Step 3/7: Creating simulation...');
