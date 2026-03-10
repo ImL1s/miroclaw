@@ -42,6 +42,11 @@ mirofish chat <simulation_id> "哪些 KOL 最極端？"
 
 # 採訪 Agent
 mirofish interview <simulation_id> 0 "你的觀點是什麼？"
+
+# P2P 多節點推演
+mirofish peers add http://192.168.1.200:5001 "node-b"
+mirofish predict "如果比特幣突破15萬" --p2p
+mirofish meta "如果比特幣突破15萬"
 ```
 
 ## OpenClaw Skill
@@ -69,6 +74,11 @@ miro_claw/
 │   ├── lib/api.js        # HTTP client
 │   ├── lib/docker.js     # Docker/Native daemon 管理
 │   ├── lib/predict.js    # 高階推演流程
+│   ├── lib/canvas.js     # 視覺化 Dashboard
+│   ├── lib/peer-config.js # P2P peer 管理
+│   ├── lib/p2p.js        # P2P 種子/結果廣播
+│   ├── lib/meta-report.js # 多節點結果合併
+│   ├── test/             # 單元測試（19 tests）
 │   └── package.json
 ├── skills/               # OpenClaw skill
 │   └── mirofish-predict/
