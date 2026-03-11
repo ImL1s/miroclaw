@@ -106,3 +106,17 @@ mirofish predict "主題" --canvas
 - `--platform` 可選 `twitter`、`reddit`、`parallel`（推薦 parallel）
 - `--canvas` 推演完成後自動啟動視覺化 Dashboard
 - 建議 LLM ≥ 14B 參數
+
+## OpenClaw Extension (高級整合)
+
+如果需要 Canvas 報告、自動觸發、Gateway RPC 控制，安裝 MiroFish Extension：
+
+1. 將 `extensions/mirofish/` 複製到 OpenClaw 的 `extensions/` 目錄
+2. 執行 `cd extensions/mirofish && npm install && npm run build`
+3. 重啟 OpenClaw Gateway
+
+Extension 提供：
+- **Path B:** 聊天中自動觸發推演（需設定 `autoTrigger: true`）
+- **Path C:** Agent tool `mirofish_predict`（LLM 直接調用）
+- **Gateway RPC:** `mirofish.predict`, `mirofish.status`, `mirofish.cancel`, `mirofish.list`
+- **Canvas:** `GET /mirofish/canvas?simId=xxx`
