@@ -1,28 +1,73 @@
-# Repository Guidelines
+CLAUDE.md
+AGENTS.md
+GEMINI.md
 
-## Project Structure & Module Organization
-`MiroFish/` is the main app and Git repository in this workspace. Work from there unless you are editing shared docs or helper tooling. `MiroFish/frontend/` contains the Vue 3 + Vite UI, with pages in `src/views/`, reusable pieces in `src/components/`, and API clients in `src/api/`. `MiroFish/backend/app/` holds the Flask API, services, models, and utilities; `MiroFish/backend/scripts/` contains validation and simulation helpers. At the workspace root, `cli/` packages the `mirofish` CLI, `docs/` stores planning notes, and `skills/` contains local agent skills.
+This file provides guidance to AI coding agents (Claude Code, Gemini, etc.) when working with code in this repository.
 
-## Build, Test, and Development Commands
-Run these from `MiroFish/`:
+## Project Overview
 
-- `npm run setup:all`: install Node dependencies and sync the backend `uv` environment.
-- `npm run dev`: start Flask on `http://localhost:5001` and Vite on `http://localhost:3000`.
-- `npm run backend` or `npm run frontend`: run one side only.
-- `npm run build`: produce the frontend bundle.
-- `docker compose up -d`: start the containerized stack with values from `.env`.
+MiroClaw is an integration project combining [MiroFish](https://github.com/666ghj/MiroFish) (a multi-agent simulation engine featuring 55 AI Agents) and OpenClaw. It packages the swarm intelligence deduction engine into a Node.js CLI tool (`mirofish-cli`) and an OpenClaw skill.
 
-- `cd backend && uv run pytest -q`: run the backend test suite.
-- `cd backend && uv run python scripts/test_profile_format.py`: run the profile-format validation script.
+### Vision: Decentralized Swarm Intelligence Prediction Protocol
+1. **Deduction Layer**: MiroFish Engine (GraphRAG + OASIS multi-agent simulation + Report AI)
+2. **Agent Layer**: OpenClaw Gateway Network (P2P communication, Task dispatch)
+3. **Consensus Layer**: Cosmos SDK AppChain (Optional - for on-chain attestation & reputation)
 
-## Coding Style & Naming Conventions
-Python uses 4-space indentation, snake_case module names, and existing docstring/type-hint patterns in API and service code. Vue and JavaScript use 2-space indentation, single quotes, and semicolon-light formatting. Keep Vue single-file components in PascalCase such as `Step3Simulation.vue`; keep API and store helpers in concise lowercase or camelCase filenames such as `simulation.js` and `pendingUpload.js`. No repo-wide ESLint, Prettier, or Ruff config is checked in, so match surrounding files closely.
+## Architecture & Repository Structure
 
-## Testing Guidelines
-Use `pytest` for backend changes and name new tests `test_*.py`. Prefer focused coverage around modified services or API routes, then rerun `uv run pytest -q` before opening a PR. Frontend automation is not configured yet, so include manual verification steps and screenshots for UI changes.
+```
+miro_claw/
+├── cli/                  # mirofish-cli npm package (Node.js)
+│   ├── bin/mirofish.js   # CLI entry point
+│   ├── lib/              # Core logic: predict pipeline, docker/native daemon
+│   ├── lib/p2p.js        # P2P broadast (seeds/results)
+│   ├── lib/meta-report.js# Multi-node consensus analysis
+│   └── test/             # CLI Unit & E2E Tests (Mocha/native)
+├── skills/               # OpenClaw skill (e.g., mirofish-predict)
+├── MiroFish/             # Core Engine (Submodule - Python/Vue)
+│   ├── backend/          # Python Flask API (:5001)
+│   │   ├── app/api/      # Blueprints: graph, simulation, report, p2p
+│   │   └── run.py        # Entry point
+│   └── frontend/         # Vue 3 + Vite SPA (:3000)
+└── .env                  # Global configurations (ZEP_API_KEY, LLM_API_KEY)
+```
 
-## Commit & Pull Request Guidelines
-Recent history favors Conventional Commits, for example `feat(graph): ...`, `fix(report_agent): ...`, and `docs(readme): ...`. Follow `type(scope): imperative summary` when possible. PRs should summarize user-visible impact, list touched areas, note `.env` or API-key changes, link related issues, and include test evidence. Attach screenshots or sample request/response payloads when changing the UI or report output.
+### Core Prediction Pipeline (7-step Async Flow)
+1. `POST /api/graph/ontology/generate` (LLM extracts ontology)
+2. `POST /api/graph/build` (Build Zep GraphRAG)
+3. `POST /api/simulation/prepare` (Generate Camel-OASIS agent profiles)
+4. `POST /api/simulation/start` (Spawn OASIS simulation subprocess)
+5. `GET /api/simulation/<id>/run-status` (Poll completion)
+6. `POST /api/report/generate` (Autonomous Report Agent analyzes output)
+7. CLI Launch Canvas (optional)
 
-## Security & Configuration Tips
-Keep secrets in local `.env` files only. Required keys include `LLM_API_KEY` and `ZEP_API_KEY`; optional accelerator settings should be added only when used. Do not commit populated `.env` files, build artifacts, or debug logs.
+### P2P Distributed Simulation Architecture
+* **Peers**: Configured locally via `mirofish peers add <url>`.
+* **Seed Broadcast**: CLI sends to peer's `POST /api/p2p/predict`.
+* **Auto-Predict**: If peer has `P2P_AUTO_PREDICT=true`, Flask backend (`p2p.py`) spawns a background `node mirofish.js predict ... --p2p-reply-only` process to natively run the engine.
+* **Results Collection**: CLI queries `GET /api/p2p/results` from peers and uses `lib/meta-report.js` to merge JSON reports into a formatted consensus summary.
+
+## Development Commands
+
+**Full Stack (MiroFish Core)**
+* Setup: `cd MiroFish && npm run setup:all` (Installs Node modules & uv venv)
+* Dev Server (Frontend + Backend): `cd MiroFish && npm run dev`
+* Backend Only: `cd MiroFish && npm run backend`
+* Frontend Only: `cd MiroFish && npm run frontend`
+
+**Testing**
+* Python Backend (pytest): `cd MiroFish/backend && uv run pytest tests -v`
+* CLI Unit Tests: `cd cli && node test/peer-config.test.js && node test/p2p.test.js && node test/meta-report.test.js`
+* Full P2P E2E Integration: `bash cli/test/e2e-p2p.sh`
+
+**Local CLI Testing**
+* `node cli/bin/mirofish.js predict "Topic" --rounds=10`
+* `node cli/bin/mirofish.js meta "Topic"` (P2P consensus)
+
+## Technical Decisions & Conventions
+
+* **Python Backend**: Uses Flask factory pattern, Blueprints, and `uv` for dependency management (`backend/pyproject.toml`). Use 4-space indent, `snake_case`.
+* **JavaScript/Node**: Uses 2-space indent, single quotes, minimal semi-colons.
+* **LLM & Memory**: Employs OpenAI SDK wrapper (configurable base URLs) to support any local/remote model (often local LM Studio running on `192.168.x.x`). Uses Zep Cloud for the GraphRAG layer.
+* **Commits**: Follow Conventional Commits format (e.g., `feat(p2p): add auto-predict`, `fix(cli): fix timeout`).
+* **Test Hygiene**: Ensure test isolation. Avoid modifying global state in tests without teardown (e.g., use mock files or reset fetch mocks via `try/finally`). E2E testing uses live port binding (e.g. 5091/5092) with rigorous cleanup traps.
