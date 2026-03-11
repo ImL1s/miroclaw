@@ -17,7 +17,10 @@ const MAX_POLL_MINUTES = 60;
 async function predict(seedText, opts = {}) {
     const rounds = opts.rounds || 20;
     const jsonStream = opts.jsonStream ? wrapWithJsonStream() : null;
+    let currentStep = 0;
+    if (jsonStream) jsonStream.runStart({ topic: seedText });
 
+  try {
     // Step 0: Ensure backend
     await ensureRunning();
 
@@ -57,6 +60,8 @@ async function predict(seedText, opts = {}) {
     }
 
     // Step 1: Create project (ontology generation)
+    currentStep = 1;
+    if (jsonStream) jsonStream.stepStart(1);
     console.log('\n📋 Step 1/7: Creating project & generating ontology...');
     const tmpFile = path.join(os.tmpdir(), `mirofish_seed_${Date.now()}.txt`);
     fs.writeFileSync(tmpFile, documentText);
@@ -73,8 +78,11 @@ async function predict(seedText, opts = {}) {
         process.exit(1);
     }
     console.log(`   Project ID: ${projectId}`);
+    if (jsonStream) jsonStream.stepDone(1, { projectId });
 
     // Step 2: Build knowledge graph (async — returns task_id)
+    currentStep = 2;
+    if (jsonStream) jsonStream.stepStart(2);
     console.log('\n🕸️  Step 2/7: Building knowledge graph...');
     const buildRes = await request('POST', '/api/graph/build', { project_id: projectId });
     const buildData = buildRes.data || buildRes;
@@ -106,8 +114,11 @@ async function predict(seedText, opts = {}) {
     } else {
         console.log('   ✅ Knowledge graph built.');
     }
+    if (jsonStream) jsonStream.stepDone(2, { graphBuilt: true });
 
     // Step 3: Create simulation
+    currentStep = 3;
+    if (jsonStream) jsonStream.stepStart(3);
     console.log('\n🎯 Step 3/7: Creating simulation...');
     const createRes = await request('POST', '/api/simulation/create', {
         project_id: projectId,
@@ -121,8 +132,11 @@ async function predict(seedText, opts = {}) {
         process.exit(1);
     }
     console.log(`   Simulation ID: ${simId}`);
+    if (jsonStream) jsonStream.stepDone(3, { simId });
 
     // Step 4: Prepare simulation (generate agent personas)
+    currentStep = 4;
+    if (jsonStream) jsonStream.stepStart(4);
     console.log('\n🤖 Step 4/7: Preparing simulation (generating agent personas)...');
     console.log('   This may take several minutes...');
     const prepRes = await request('POST', '/api/simulation/prepare', {
@@ -158,16 +172,22 @@ async function predict(seedText, opts = {}) {
     } else {
         console.log('   ✅ Agent personas ready!');
     }
+    if (jsonStream) jsonStream.stepDone(4, { prepared: true });
 
     // Step 5: Start simulation
+    currentStep = 5;
+    if (jsonStream) jsonStream.stepStart(5);
     console.log(`\n🚀 Step 5/7: Starting simulation (${rounds} rounds)...`);
     await request('POST', '/api/simulation/start', {
         simulation_id: simId,
         max_rounds: rounds,
     });
     console.log('   Simulation started. This may take 10-30 minutes.');
+    if (jsonStream) jsonStream.stepDone(5, { started: true, rounds });
 
     // Step 6: Poll status
+    currentStep = 6;
+    if (jsonStream) jsonStream.stepStart(6);
     console.log('\n⏳ Step 6/7: Waiting for completion...');
     const maxPolls = (MAX_POLL_MINUTES * 60 * 1000) / POLL_INTERVAL;
     for (let i = 0; i < maxPolls; i++) {
@@ -178,6 +198,7 @@ async function predict(seedText, opts = {}) {
             const runnerStatus = statusData.runner_status || statusData.status;
             const progress = statusData.progress || '';
             process.stdout.write(`\r   Status: ${runnerStatus} ${progress}    `);
+            if (jsonStream) jsonStream.stepProgress(6, parseFloat(progress) / 100 || 0, runnerStatus);
 
             if (runnerStatus === 'completed' || runnerStatus === 'finished') {
                 console.log('\n   ✅ Simulation completed!');
@@ -191,8 +212,11 @@ async function predict(seedText, opts = {}) {
             process.stdout.write('.');
         }
     }
+    if (jsonStream) jsonStream.stepDone(6, { completed: true });
 
     // Step 7: Generate & retrieve report
+    currentStep = 7;
+    if (jsonStream) jsonStream.stepStart(7);
     console.log('\n📊 Step 7/7: Generating report...');
     await request('POST', '/api/report/generate', { simulation_id: simId });
 
@@ -228,6 +252,7 @@ async function predict(seedText, opts = {}) {
 
     const report = await request('GET', `/api/report/by-simulation/${simId}`);
     const reportData = report.data || report;
+    if (jsonStream) jsonStream.stepDone(7, { reportId: reportData.id || reportData.report_id });
 
     // Format and display report
     const formatted = formatReport(reportData, seedText);
@@ -260,7 +285,12 @@ async function predict(seedText, opts = {}) {
         await launchCanvas(simId, { port: opts.canvasPort || 18790 });
     }
 
+    if (jsonStream) jsonStream.runDone({ reportId: reportData.id || reportData.report_id || simId, simId });
     return { projectId, simId, report: reportData };
+  } catch (err) {
+    if (jsonStream) jsonStream.runError(currentStep, err.code || 'error', err.message);
+    throw err;
+  }
 }
 
 /**
