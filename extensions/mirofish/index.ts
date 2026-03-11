@@ -15,6 +15,8 @@ import { createMirofishTools } from "./src/tools.js";
 import { createMessageHook } from "./src/hooks.js";
 import { registerGatewayMethods } from "./src/gateway.js";
 import { registerCanvasRoute } from "./src/canvas-route.js";
+import { createProgressBroadcaster } from "./src/progress-broadcaster.js";
+import { registerPeerDiscovery } from "./src/peer-discovery.js";
 
 // Minimal type definitions (will be replaced by openclaw SDK types later)
 interface PluginApi {
@@ -70,8 +72,35 @@ const plugin = {
     // Gateway RPC methods (pass config for Discord webhook etc.)
     registerGatewayMethods(api, runManager, log, config);
 
+    // SSE Progress Broadcaster (real-time event push)
+    const broadcaster = createProgressBroadcaster(log);
+    broadcaster.registerRoute(api);
+
+    // Wire RunManager events to SSE broadcaster
+    const origSpawn = runManager.spawn.bind(runManager);
+    (runManager as unknown as Record<string, unknown>).spawn = (
+      topic: string,
+      opts: { onEvent: (evt: unknown) => void; rounds?: number },
+    ) => {
+      const origOnEvent = opts.onEvent;
+      const wrappedOpts = {
+        ...opts,
+        onEvent(evt: unknown) {
+          origOnEvent(evt);
+          // Broadcast to SSE subscribers
+          const event = evt as Record<string, unknown>;
+          const runId = (event.runId as string) || "unknown";
+          broadcaster.broadcast(runId, event);
+        },
+      };
+      return origSpawn(topic, wrappedOpts);
+    };
+
     // Canvas route
     registerCanvasRoute(api, config, log);
+
+    // P2P Peer Discovery
+    registerPeerDiscovery(api, config, log);
 
     // Service lifecycle
     api.registerService({
@@ -81,6 +110,7 @@ const plugin = {
       },
       stop() {
         runManager.cleanup();
+        broadcaster.closeAll();
         log.info("[MiroFish] RunManager stopped, orphan processes cleaned.");
       },
     });
