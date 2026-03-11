@@ -75,7 +75,7 @@ async function predict(seedText, opts = {}) {
     const projectId = projectData.project_id || projectData.id;
     if (!projectId) {
         console.error('❌ Failed to create project:', JSON.stringify(project, null, 2));
-        process.exit(1);
+        throw new Error(`Failed to create project: ${JSON.stringify(project, null, 2)}`);
     }
     console.log(`   Project ID: ${projectId}`);
     if (jsonStream) jsonStream.stepDone(1, { projectId });
@@ -105,7 +105,7 @@ async function predict(seedText, opts = {}) {
                 }
                 if (taskStatus === 'failed' || taskStatus === 'error') {
                     console.error(`\n   ❌ Graph build failed: ${JSON.stringify(taskData)}`);
-                    process.exit(1);
+                    throw new Error(`Graph build failed: ${JSON.stringify(taskData)}`);
                 }
             } catch {
                 process.stdout.write('.');
@@ -129,7 +129,7 @@ async function predict(seedText, opts = {}) {
     const simId = createData.simulation_id || createData.id;
     if (!simId) {
         console.error('❌ Failed to create simulation:', JSON.stringify(createRes, null, 2));
-        process.exit(1);
+        throw new Error(`Failed to create simulation: ${JSON.stringify(createRes, null, 2)}`);
     }
     console.log(`   Simulation ID: ${simId}`);
     if (jsonStream) jsonStream.stepDone(3, { simId });
@@ -163,7 +163,7 @@ async function predict(seedText, opts = {}) {
                 }
                 if (ps.status === 'failed' || ps.status === 'error') {
                     console.error(`\n   ❌ Preparation failed: ${JSON.stringify(ps)}`);
-                    process.exit(1);
+                    throw new Error(`Preparation failed: ${JSON.stringify(ps)}`);
                 }
             } catch {
                 process.stdout.write('.');
@@ -206,7 +206,7 @@ async function predict(seedText, opts = {}) {
             }
             if (runnerStatus === 'failed' || runnerStatus === 'error') {
                 console.error(`\n   ❌ Simulation failed: ${JSON.stringify(statusData)}`);
-                process.exit(1);
+                throw new Error(`Simulation failed: ${JSON.stringify(statusData)}`);
             }
         } catch {
             process.stdout.write('.');
