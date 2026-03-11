@@ -10,8 +10,11 @@
  * All business logic delegated to mirofish-cli child process.
  */
 
-// These imports will be created in subsequent tasks.
-// For now, comment them out and create a minimal skeleton.
+import { createRunManager } from "./src/run-manager.js";
+import { createMirofishTools } from "./src/tools.js";
+import { createMessageHook } from "./src/hooks.js";
+import { registerGatewayMethods } from "./src/gateway.js";
+import { registerCanvasRoute } from "./src/canvas-route.js";
 
 // Minimal type definitions (will be replaced by openclaw SDK types later)
 interface PluginApi {
@@ -22,14 +25,10 @@ interface PluginApi {
   };
   pluginConfig?: Record<string, unknown>;
   registerTool: (tool: unknown) => void;
-  registerHook: (
-    events: string | string[],
-    handler: (...args: unknown[]) => unknown,
-  ) => void;
-  registerGatewayMethod: (
-    method: string,
-    handler: (opts: unknown) => Promise<void> | void,
-  ) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  registerHook: (events: string | string[], handler: (...args: any[]) => any) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  registerGatewayMethod: (method: string, handler: (opts: any) => any) => void;
   registerHttpRoute: (params: unknown) => void;
   registerService: (service: {
     id: string;
@@ -47,21 +46,42 @@ const plugin = {
 
   register(api: PluginApi) {
     const log = api.logger;
-    log.info("[MiroFish] Extension loading...");
+    const config = (api.pluginConfig || {}) as Record<string, unknown>;
 
-    // TODO: Task 4 — RunManager
-    // TODO: Task 5 — Agent tools (Path C)
-    // TODO: Task 6 — Message hook (Path B)
-    // TODO: Task 7 — Gateway RPC methods
-    // TODO: Task 8 — Canvas route
+    const runManager = createRunManager({
+      maxConcurrent: (config.maxConcurrent as number) || 2,
+      runTimeout: (config.runTimeout as number) || 30 * 60 * 1000,
+      dedupeWindow: (config.dedupeWindow as number) || 60 * 1000,
+      idempotencyTTL: (config.idempotencyTTL as number) || 60 * 60 * 1000,
+      cliBin: (config.cliBin as string) || "mirofish",
+      log,
+    });
 
+    // Path C: Agent tools
+    const tools = createMirofishTools(runManager, log);
+    for (const tool of tools) {
+      api.registerTool(tool);
+    }
+
+    // Path B: Message hook
+    const hook = createMessageHook(runManager, config, log);
+    api.registerHook("agent_end", hook);
+
+    // Gateway RPC methods
+    registerGatewayMethods(api, runManager, log);
+
+    // Canvas route
+    registerCanvasRoute(api, config, log);
+
+    // Service lifecycle
     api.registerService({
       id: "mirofish-run-manager",
       start() {
-        log.info("[MiroFish] Extension loaded (stub).");
+        log.info("[MiroFish] Extension loaded. RunManager ready.");
       },
       stop() {
-        log.info("[MiroFish] Extension stopped.");
+        runManager.cleanup();
+        log.info("[MiroFish] RunManager stopped, orphan processes cleaned.");
       },
     });
   },
