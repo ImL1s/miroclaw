@@ -20,6 +20,7 @@ interface PluginApi {
   registerHttpRoute: (params: {
     method: string;
     path: string;
+    auth?: "gateway" | "plugin";
     handler: (req: HttpRequest, res: HttpResponse) => void | Promise<void>;
   }) => void;
 }
@@ -48,6 +49,7 @@ export function registerCanvasRoute(
   api.registerHttpRoute({
     method: "GET",
     path: "/mirofish/canvas",
+    auth: "gateway",
     handler(req: HttpRequest, res: HttpResponse) {
       const url = new URL(req.url, "http://localhost");
       const simId = url.searchParams.get("simId") || "";

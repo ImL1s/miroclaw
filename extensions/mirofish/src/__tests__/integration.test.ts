@@ -20,7 +20,7 @@ describe("MiroFish Extension Integration", () => {
       logger: { info: () => {}, error: () => {} },
       pluginConfig: { cliBin: "echo" },
       registerTool: () => calls.push("tool"),
-      registerHook: (_events: unknown, _handler: unknown) =>
+      registerHook: (_events: unknown, _handler: unknown, _opts?: unknown) =>
         calls.push("hook"),
       registerGatewayMethod: (method: string) =>
         calls.push(`gateway:${method}`),

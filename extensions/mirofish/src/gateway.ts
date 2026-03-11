@@ -16,6 +16,26 @@ interface PluginApi {
 }
 
 /**
+ * Send a message to a Discord webhook URL (fire-and-forget).
+ */
+async function notifyDiscord(webhookUrl: string, content: string, log: Logger) {
+  try {
+    const res = await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content }),
+    });
+    if (res.ok) {
+      log.info("[MiroFish] Discord notification sent");
+    } else {
+      log.error(`[MiroFish] Discord webhook failed: ${res.status}`);
+    }
+  } catch (err) {
+    log.error(`[MiroFish] Discord webhook error: ${err}`);
+  }
+}
+
+/**
  * Register MiroFish Gateway RPC methods.
  * Methods: mirofish.predict, mirofish.status, mirofish.cancel, mirofish.list
  */
@@ -23,7 +43,10 @@ export function registerGatewayMethods(
   api: PluginApi,
   runManager: RunManager,
   log: Logger,
+  config?: Record<string, unknown>,
 ) {
+  const discordWebhook = process.env.MIROFISH_DISCORD_WEBHOOK || (config?.discordWebhook as string) || "";
+
   // mirofish.predict — start a prediction (returns immediately with runId)
   api.registerGatewayMethod("mirofish.predict", async (opts: GatewayOpts) => {
     const { params, respond } = opts;
@@ -52,6 +75,27 @@ export function registerGatewayMethods(
         if (event.event === "run:done" && event.reportId) {
           runManager.cacheResult(hash, event.reportId as string);
           log.info(`[MiroFish] RPC predict complete: ${event.reportId}`);
+
+          // Notify Discord webhook on completion
+          if (discordWebhook) {
+            const msg = [
+              `🐟 **MiroFish 推演完成**`,
+              `> **主題:** ${topic}`,
+              `> **Report ID:** \`${event.reportId}\``,
+              `\`\`\`bash`,
+              `mirofish canvas ${event.simId || event.reportId}  # 開啟 Dashboard`,
+              `mirofish chat ${event.simId || event.reportId} "問題"  # 追問`,
+              `\`\`\``,
+            ].join("\n");
+            notifyDiscord(discordWebhook, msg, log);
+          }
+        }
+        if (event.event === "run:cancelled" && discordWebhook) {
+          notifyDiscord(discordWebhook, `🛑 **MiroFish 推演已取消**\n> **主題:** ${topic}`, log);
+        }
+        if (event.event === "run:error" && discordWebhook) {
+          const msg = `⚠️ **MiroFish 推演失敗**\n> **主題:** ${topic}\n> **錯誤:** ${event.message || "unknown"}`;
+          notifyDiscord(discordWebhook, msg, log);
         }
       },
     });
@@ -59,6 +103,11 @@ export function registerGatewayMethods(
     if (!result) {
       respond(false, undefined, { message: "Failed to spawn prediction" });
       return;
+    }
+
+    // Notify Discord that prediction started
+    if (discordWebhook) {
+      notifyDiscord(discordWebhook, `🐟 **MiroFish 推演啟動**\n> **主題:** ${topic}\n> **Run ID:** \`${result.runId}\``, log);
     }
 
     respond(true, { runId: result.runId, status: "started", topic });
@@ -83,11 +132,17 @@ export function registerGatewayMethods(
         });
       }
     } else {
-      const runs = Array.from(runManager.getActiveRuns().entries()).map(([id, r]) => ({
-        runId: id,
-        topic: r.topic,
-        elapsedSeconds: Math.round((Date.now() - r.startedAt) / 1000),
-      }));
+      const seen = new Set<unknown>();
+      const runs: { runId: string; topic: string; elapsedSeconds: number }[] = [];
+      for (const [id, r] of runManager.getActiveRuns()) {
+        if (seen.has(r)) continue;
+        seen.add(r);
+        runs.push({
+          runId: id,
+          topic: r.topic,
+          elapsedSeconds: Math.round((Date.now() - r.startedAt) / 1000),
+        });
+      }
       respond(true, { runs, count: runs.length });
     }
   });
@@ -104,14 +159,20 @@ export function registerGatewayMethods(
     respond(true, { cancelled, runId });
   });
 
-  // mirofish.list — list all active runs
+  // mirofish.list — list all active runs (deduplicated by run object identity)
   api.registerGatewayMethod("mirofish.list", (opts: GatewayOpts) => {
     const { respond } = opts;
-    const runs = Array.from(runManager.getActiveRuns().entries()).map(([id, r]) => ({
-      runId: id,
-      topic: r.topic,
-      elapsedSeconds: Math.round((Date.now() - r.startedAt) / 1000),
-    }));
+    const seen = new Set<unknown>();
+    const runs: { runId: string; topic: string; elapsedSeconds: number }[] = [];
+    for (const [id, r] of runManager.getActiveRuns()) {
+      if (seen.has(r)) continue;
+      seen.add(r);
+      runs.push({
+        runId: id,
+        topic: r.topic,
+        elapsedSeconds: Math.round((Date.now() - r.startedAt) / 1000),
+      });
+    }
     respond(true, { runs, count: runs.length });
   });
 

@@ -18,6 +18,21 @@ async function predict(seedText, opts = {}) {
     const rounds = opts.rounds || 20;
     const jsonStream = opts.jsonStream ? wrapWithJsonStream() : null;
     let currentStep = 0;
+
+    // In json-stream mode, redirect human-readable output to stderr
+    // so stdout is pure NDJSON for the RunManager to parse.
+    const _origLog = console.log;
+    const _origWrite = process.stdout.write.bind(process.stdout);
+    if (jsonStream) {
+        console.log = (...args) => process.stderr.write(args.join(' ') + '\n');
+        process.stdout.write = (chunk, ...rest) => {
+            if (typeof chunk === 'string' && !chunk.startsWith('{')) {
+                return process.stderr.write(chunk, ...rest);
+            }
+            return _origWrite(chunk, ...rest);
+        };
+    }
+
     if (jsonStream) jsonStream.runStart({ topic: seedText });
 
   try {
@@ -290,6 +305,12 @@ async function predict(seedText, opts = {}) {
   } catch (err) {
     if (jsonStream) jsonStream.runError(currentStep, err.code || 'error', err.message);
     throw err;
+  } finally {
+    // Restore stdout in json-stream mode
+    if (jsonStream) {
+        console.log = _origLog;
+        process.stdout.write = _origWrite;
+    }
   }
 }
 

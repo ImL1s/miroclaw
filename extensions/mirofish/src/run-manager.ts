@@ -34,6 +34,7 @@ export interface ActiveRun {
   startedAt: number;
   timeoutTimer: ReturnType<typeof setTimeout> | null;
   killTimer: ReturnType<typeof setTimeout> | null;
+  cancelled?: boolean;
 }
 
 export interface RunManager {
@@ -191,15 +192,15 @@ export function createRunManager(config: RunManagerConfig): RunManager {
         try {
           const event = JSON.parse(trimmed) as Record<string, unknown>;
 
-          // When run:start event arrives with a real runId, update the map key
+          // When run:start event arrives with a real runId, keep BOTH keys
+          // so callers using the temp runId (from RPC response) still find the run.
           if (
             event.event === "run:start" &&
-            typeof event.runId === "string"
+            typeof event.runId === "string" &&
+            event.runId !== currentRunId
           ) {
             const realRunId = event.runId;
-            activeRuns.delete(currentRunId);
-            currentRunId = realRunId;
-            run.runId = realRunId;
+            // Keep temp key as primary, add real key as alias
             activeRuns.set(realRunId, run);
           }
 
@@ -216,22 +217,32 @@ export function createRunManager(config: RunManagerConfig): RunManager {
       log.error(`[RunManager] stderr (${currentRunId}): ${chunk.toString()}`);
     });
 
+    // Helper: delete both temp and alias keys for this run
+    const cleanupRun = () => {
+      for (const [key, val] of activeRuns) {
+        if (val === run) activeRuns.delete(key);
+      }
+    };
+
     // On child exit, clean up
     child.on("close", (code: number | null) => {
       if (run.timeoutTimer) clearTimeout(run.timeoutTimer);
       if (run.killTimer) clearTimeout(run.killTimer);
-      activeRuns.delete(currentRunId);
-      if (code !== 0) {
-        log.error(`[MiroFish] Run ${currentRunId} exited with code ${code}`);
-        opts.onEvent({ event: "run:error", runId: currentRunId, error: "exit", message: `Process exited with code ${code}` });
+      cleanupRun();
+      if (run.cancelled) {
+        log.info(`[MiroFish] Run ${tempRunId} cancelled`);
+        opts.onEvent({ event: "run:cancelled", runId: tempRunId });
+      } else if (code !== 0) {
+        log.error(`[MiroFish] Run ${tempRunId} exited with code ${code}`);
+        opts.onEvent({ event: "run:error", runId: tempRunId, error: "exit", message: `Process exited with code ${code}` });
       }
-      log.info(`[RunManager] Run ${currentRunId} exited`);
+      log.info(`[RunManager] Run ${tempRunId} exited`);
     });
 
     child.on("error", (err: Error) => {
       if (run.timeoutTimer) clearTimeout(run.timeoutTimer);
-      activeRuns.delete(currentRunId);
-      const errorEvent = { event: "run:error", runId: currentRunId, error: "spawn", message: err.message };
+      cleanupRun();
+      const errorEvent = { event: "run:error", runId: tempRunId, error: "spawn", message: err.message };
       opts.onEvent(errorEvent);
     });
 
@@ -243,6 +254,7 @@ export function createRunManager(config: RunManagerConfig): RunManager {
     if (!run?.process) return false;
 
     log.info(`[MiroFish] Cancelling run ${runId}`);
+    run.cancelled = true;
     if (run.timeoutTimer) clearTimeout(run.timeoutTimer);
     activeRuns.delete(runId);  // Free slot immediately
 

@@ -46,13 +46,10 @@ export function createMirofishTools(runManager: RunManager, log: Logger) {
         },
         required: ["topic"],
       },
-      async execute({
-        topic,
-        rounds,
-      }: {
-        topic: string;
-        rounds?: number;
-      }): Promise<string> {
+      async execute(
+        _toolCallId: string,
+        { topic, rounds }: { topic: string; rounds?: number },
+      ): Promise<string> {
         log.info(
           `[mirofish_predict] topic="${topic}" rounds=${rounds ?? 20}`,
         );
@@ -77,11 +74,14 @@ export function createMirofishTools(runManager: RunManager, log: Logger) {
           });
         }
 
-        // Spawn prediction
-        const events: RunEvent[] = [];
+        // Spawn prediction (non-blocking — return runId immediately)
         const result = runManager.spawn(topic, {
           onEvent(evt: unknown) {
-            events.push(evt as RunEvent);
+            const event = evt as RunEvent;
+            if (event.event === "run:done" && event.reportId) {
+              runManager.cacheResult(hash, event.reportId);
+              log.info(`[mirofish_predict] complete: reportId=${event.reportId}`);
+            }
           },
         });
 
@@ -92,55 +92,11 @@ export function createMirofishTools(runManager: RunManager, log: Logger) {
           });
         }
 
-        // Wait for completion with safety timeout
-        return new Promise<string>((resolve) => {
-          const safetyTimeout = setTimeout(() => {
-            clearInterval(checkInterval);
-            resolve(JSON.stringify({
-              status: "error",
-              runId: result.runId,
-              error: "timeout",
-              message: "Prediction timed out (safety limit reached).",
-            }));
-          }, 35 * 60 * 1000); // 35 min safety net
-
-          const checkInterval = setInterval(() => {
-            const lastEvent = events[events.length - 1];
-            if (!lastEvent) return;
-
-            // Check for both field names (event or type) for robustness
-            const eventName = (lastEvent as any).event || (lastEvent as any).type;
-
-            if (eventName === "run:done") {
-              clearInterval(checkInterval);
-              clearTimeout(safetyTimeout);
-              if (lastEvent.reportId) {
-                runManager.cacheResult(hash, lastEvent.reportId);
-              }
-              resolve(
-                JSON.stringify({
-                  status: "completed",
-                  runId: result.runId,
-                  reportId: lastEvent.reportId,
-                  simId: lastEvent.simId,
-                  message: `Prediction complete. Report ID: "${lastEvent.reportId}".`,
-                }),
-              );
-            }
-
-            if (eventName === "run:error") {
-              clearInterval(checkInterval);
-              clearTimeout(safetyTimeout);
-              resolve(
-                JSON.stringify({
-                  status: "error",
-                  runId: result.runId,
-                  error: lastEvent.error,
-                  message: lastEvent.message || "Prediction failed.",
-                }),
-              );
-            }
-          }, 2000);
+        return JSON.stringify({
+          status: "started",
+          runId: result.runId,
+          topic,
+          message: `Prediction started (run ID: ${result.runId}). Use mirofish_status tool with this runId to check progress. Takes 10-30 minutes.`,
         });
       },
     },
@@ -157,7 +113,7 @@ export function createMirofishTools(runManager: RunManager, log: Logger) {
         },
         required: ["runId"],
       },
-      async execute({ runId }: { runId: string }): Promise<string> {
+      async execute(_toolCallId: string, { runId }: { runId: string }): Promise<string> {
         const runs = runManager.getActiveRuns();
         const run = runs.get(runId);
 

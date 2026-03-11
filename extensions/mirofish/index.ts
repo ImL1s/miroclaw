@@ -26,7 +26,7 @@ interface PluginApi {
   pluginConfig?: Record<string, unknown>;
   registerTool: (tool: unknown) => void;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  registerHook: (events: string | string[], handler: (...args: any[]) => any) => void;
+  registerHook: (events: string | string[], handler: (...args: any[]) => any, opts?: { name?: string; description?: string }) => void;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   registerGatewayMethod: (method: string, handler: (opts: any) => any) => void;
   registerHttpRoute: (params: unknown) => void;
@@ -65,10 +65,10 @@ const plugin = {
 
     // Path B: Message hook
     const hook = createMessageHook(runManager, config, log);
-    api.registerHook("agent_end", hook);
+    api.registerHook("agent_end", hook, { name: "mirofish-auto-predict" });
 
-    // Gateway RPC methods
-    registerGatewayMethods(api, runManager, log);
+    // Gateway RPC methods (pass config for Discord webhook etc.)
+    registerGatewayMethods(api, runManager, log, config);
 
     // Canvas route
     registerCanvasRoute(api, config, log);

@@ -1,5 +1,5 @@
 {
-  "name": "@mirofish/openclaw-extension",
+  "name": "@openclaw/mirofish",
   "version": "0.1.0",
   "private": true,
   "type": "module",
