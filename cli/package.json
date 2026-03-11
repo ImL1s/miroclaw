@@ -1,7 +1,7 @@
 {
     "name": "mirofish-cli",
-    "version": "0.2.0",
-    "description": "MiroFish 群體智能推演引擎 CLI — 55 AI Agents 模擬社交平台推演未來趨勢",
+    "version": "0.3.0",
+    "description": "MiroFish 群體智能推演引擎 CLI — 55 AI Agents 模擬 + P2P 分散式推演",
     "bin": {
         "mirofish": "./bin/mirofish.js"
     },
