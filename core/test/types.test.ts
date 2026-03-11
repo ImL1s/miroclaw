@@ -17,8 +17,8 @@ describe('@mirofish/core', () => {
   it('STEP_NAMES has TOTAL_STEPS + 1 entries (0-indexed placeholder)', () => {
     assert.strictEqual(STEP_NAMES.length, TOTAL_STEPS + 1);
     assert.strictEqual(STEP_NAMES[0], 'unused');
-    assert.strictEqual(STEP_NAMES[1], 'Ontology Generation');
-    assert.strictEqual(STEP_NAMES[7], 'Report Generation');
+    assert.strictEqual(STEP_NAMES[1], 'ontology_extraction');
+    assert.strictEqual(STEP_NAMES[7], 'report_generate');
   });
 
   it('EVENTS has all expected event names', () => {

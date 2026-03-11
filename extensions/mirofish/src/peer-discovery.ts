@@ -92,6 +92,18 @@ export function registerPeerDiscovery(
       return;
     }
 
+    // Validate endpoint URL
+    try {
+      const url = new URL(peerEndpoint);
+      if (!['http:', 'https:'].includes(url.protocol)) {
+        respond(false, undefined, { message: "Invalid endpoint protocol" });
+        return;
+      }
+    } catch {
+      respond(false, undefined, { message: "Invalid endpoint URL" });
+      return;
+    }
+
     knownNodes.set(peerNodeId, {
       nodeId: peerNodeId,
       endpoint: peerEndpoint,

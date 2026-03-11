@@ -4,16 +4,16 @@
  * Source of truth for step names, event names, and defaults.
  */
 
-/** The 7-step prediction pipeline names (1-indexed). */
+/** The 7-step prediction pipeline names (1-indexed, matching CLI json-stream.js). */
 export const STEP_NAMES: readonly string[] = [
-  'unused',                    // index 0 (unused, steps are 1-based)
-  'Ontology Generation',       // Step 1
-  'Knowledge Graph Build',     // Step 2
-  'Simulation Creation',       // Step 3
-  'Agent Persona Preparation', // Step 4
-  'Simulation Start',          // Step 5
-  'Simulation Polling',        // Step 6
-  'Report Generation',         // Step 7
+  'unused',                // index 0 (unused, steps are 1-based)
+  'ontology_extraction',   // Step 1
+  'graph_build',           // Step 2
+  'simulation_create',     // Step 3
+  'simulation_prepare',    // Step 4
+  'simulation_start',      // Step 5
+  'simulation_poll',       // Step 6
+  'report_generate',       // Step 7
 ] as const;
 
 /** Total number of pipeline steps. */

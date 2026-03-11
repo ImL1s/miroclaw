@@ -101,6 +101,18 @@ export function createProgressBroadcaster(log: Logger) {
     });
 
     log.info("[MiroFish] Registered SSE route: GET /mirofish/events");
+
+    // Heartbeat to detect dead connections every 30s
+    const heartbeatInterval = setInterval(() => {
+      for (const sub of subscribers) {
+        try {
+          sub.res.write(`: heartbeat\n\n`);
+        } catch {
+          subscribers.delete(sub);
+        }
+      }
+    }, 30_000);
+    heartbeatInterval.unref();
   }
 
   /**

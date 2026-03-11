@@ -437,6 +437,6 @@ function sendNativeMessage(payload) {
 
     // Fallback: postMessage to parent
     if (window.parent !== window) {
-        window.parent.postMessage({ type: 'mirofish:action', ...payload }, '*');
+        window.parent.postMessage({ type: 'mirofish:action', ...payload }, window.location.origin);
     }
 }
