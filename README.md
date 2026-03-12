@@ -58,38 +58,46 @@ MiroClaw 自動完成：啟動後端 → 建立知識圖譜 → 生成 55 個 Ag
 - **LLM API Key**（OpenAI 格式，支援任何相容 API，建議 >= 14B 參數模型）
 - **[Zep Cloud](https://www.getzep.com/) API Key**（GraphRAG 用，免費 tier 即可）
 
-### 安裝
+### 安裝（一行搞定）
 
 ```bash
-# 1. Clone MiroClaw
-git clone --recursive https://github.com/ImL1s/miro_claw.git
-cd miro_claw
+openclaw skills install mirofish-predict
+```
 
-# 2. Clone MiroFish 後端（外部依賴）
-git clone https://github.com/666ghj/MiroFish.git
+安裝後設定 API Key：
 
-# 3. 安裝 Extension 到 OpenClaw
-cp -r extensions/mirofish/ ~/.openclaw/extensions/mirofish/
-cd ~/.openclaw/extensions/mirofish && npm install && npx tsc
-cd -
+```bash
+# 編輯 ~/.mirofish/.env，填入以下三個 Key：
+LLM_API_KEY=your-llm-api-key
+LLM_BASE_URL=http://your-llm-server:1234/v1
+ZEP_API_KEY=your-zep-cloud-key
 
-# 4. 安裝 Skill（讓 LLM 知道如何使用推演能力）
-cp -r skills/mirofish-predict/ ~/.openclaw/skills/mirofish-predict/
-
-# 5. 設定 CLI
-ln -sf $(pwd)/cli/bin/mirofish.js /usr/local/bin/mirofish
-
-# 6. 首次啟動後端 + 設定 API Key
-mirofish serve start
-# → 首次會在 ~/.mirofish/.env 產生模板
-# → 編輯 ~/.mirofish/.env，填入 LLM_API_KEY、LLM_BASE_URL、ZEP_API_KEY
-mirofish serve start  # 重新啟動
-
-# 7. 重啟 OpenClaw Gateway
+# 重啟 Gateway
 openclaw gateway restart
 ```
 
-> **Apple Silicon 用戶**：目前無 ARM64 Docker image，CLI 會自動切換到原生模式（需要本地 `MiroFish/` clone 與 `uv`）。
+> **Apple Silicon 用戶**：目前無 ARM64 Docker image，CLI 會自動切換到原生模式。
+
+<details>
+<summary>手動安裝（開發者模式）</summary>
+
+```bash
+git clone --recursive https://github.com/ImL1s/miro_claw.git
+cd miro_claw
+git clone https://github.com/666ghj/MiroFish.git
+
+# 安裝 Extension + Skill
+cp -r extensions/mirofish/ ~/.openclaw/extensions/mirofish/
+cd ~/.openclaw/extensions/mirofish && npm install && npx tsc && cd -
+cp -r skills/mirofish-predict/ ~/.openclaw/skills/mirofish-predict/
+
+# CLI symlink
+ln -sf $(pwd)/cli/bin/mirofish.js /usr/local/bin/mirofish
+
+openclaw gateway restart
+```
+
+</details>
 
 ### 開始使用
 

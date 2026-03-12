@@ -19,21 +19,219 @@ English | [简体中文](./README-CN.md) | [繁體中文](./README.md)
 
 ## Demo
 
-https://github.com/ImL1s/miro_claw/releases/download/v0.4.0-demo/mirofish-discord-demo.mp4
+<div align="center">
+
+![MiroClaw Demo](docs/mirofish-demo.gif)
+
+*55 AI Agent Swarm Intelligence Prediction — From Conversation to Report*
+
+</div>
 
 ## What is this?
 
-MiroClaw wraps [MiroFish](https://github.com/666ghj/MiroFish) (a simulation engine where 55 AI Agents interact on simulated social platforms) into a CLI tool and an [OpenClaw](https://openclaw.ai) extension, enabling swarm intelligence predictions with a single command.
+MiroClaw is an [OpenClaw](https://openclaw.ai) AI Agent extension that integrates [MiroFish](https://github.com/666ghj/MiroFish) (a simulation engine where 55 AI Agents interact on simulated social platforms) into the OpenClaw Gateway.
 
-**Just type one sentence:**
+**Just say it in OpenClaw chat:**
 
-```bash
-mirofish predict "What happens to the crypto market if Bitcoin breaks $150K?"
+```
+You: Predict what happens to the market if Bitcoin breaks $200K
+Agent: Starting MiroFish prediction... [55 Agent social simulation] → Done!
 ```
 
 MiroClaw automatically: starts the backend → builds a knowledge graph → spawns 55 Agents → runs social simulation → outputs a prediction report.
 
-## Three Operating Modes
+## Three-Layer Architecture
+
+| Layer | Technology | Status |
+|:---|:---|:---|
+| **Deduction** | MiroFish Engine (GraphRAG + OASIS multi-agent simulation + Report AI) | ✅ Done |
+| **Agent** | OpenClaw Gateway Network (P2P communication, task dispatch, Canvas visualization) | ✅ Done |
+| **Consensus** | Cosmos SDK AppChain (prediction attestation, reputation scoring, zero gas fees) | 🚧 Planned |
+
+## Quick Start: Install to OpenClaw
+
+### Prerequisites
+
+- **[OpenClaw](https://openclaw.ai)** Gateway installed and running
+- **Node.js** >= 18
+- **Docker Desktop** (recommended) or Python 3.11+ with [uv](https://github.com/astral-sh/uv)
+- **LLM API Key** (OpenAI format, any compatible API, recommended >= 14B parameter model)
+- **[Zep Cloud](https://www.getzep.com/) API Key** (for GraphRAG, free tier works)
+
+### Installation (One Command)
+
+```bash
+openclaw skills install mirofish-predict
+```
+
+Then set up your API keys:
+
+```bash
+# Edit ~/.mirofish/.env with these three keys:
+LLM_API_KEY=your-llm-api-key
+LLM_BASE_URL=http://your-llm-server:1234/v1
+ZEP_API_KEY=your-zep-cloud-key
+
+# Restart Gateway
+openclaw gateway restart
+```
+
+> **Apple Silicon users**: No ARM64 Docker image available. CLI auto-falls back to native mode.
+
+<details>
+<summary>Manual Installation (Developer Mode)</summary>
+
+```bash
+git clone --recursive https://github.com/ImL1s/miro_claw.git
+cd miro_claw
+git clone https://github.com/666ghj/MiroFish.git
+
+# Install Extension + Skill
+cp -r extensions/mirofish/ ~/.openclaw/extensions/mirofish/
+cd ~/.openclaw/extensions/mirofish && npm install && npx tsc && cd -
+cp -r skills/mirofish-predict/ ~/.openclaw/skills/mirofish-predict/
+
+# CLI symlink
+ln -sf $(pwd)/cli/bin/mirofish.js /usr/local/bin/mirofish
+
+openclaw gateway restart
+```
+
+</details>
+
+### Start Using
+
+After installation, trigger predictions with natural language in OpenClaw chat:
+
+```
+🧑 You: Predict what happens to the market if Bitcoin breaks $200K
+
+🤖 Agent: Starting MiroFish prediction...
+         📡 SSE real-time updates:
+           Step 1/7 Building knowledge graph ✅
+           Step 2/7 Spawning 55 AI Agents ⏳
+           ...
+           Step 7/7 Generating prediction report ✅
+         
+         📊 Prediction complete! Report summary:
+         Bitcoin breaking $200K would trigger cross-domain chain reactions...
+         Simulation ID: sim_c6167c07bf05
+
+🧑 You: Ask Agent #3 what they think about this
+
+🤖 Agent: [calls mirofish_interview]
+         Agent #3 (@CryptoKing_BTC, 19-year-old tech enthusiast) responds:
+         "I think this is an inevitable trend, institutional capital..."
+
+🧑 You: What's the most pessimistic view in this report?
+
+🤖 Agent: [calls mirofish_chat]
+         Based on the report analysis, the most pessimistic view comes from Agent #12...
+```
+
+### Agent Tools
+
+The LLM automatically selects the appropriate tool based on the Skill description:
+
+| Tool | Function | Typical Triggers |
+|:---|:---|:---|
+| `mirofish_predict` | Start new prediction | "predict...", "forecast...", "analyze impact of..." |
+| `mirofish_status` | Check prediction progress | "how's the prediction going?", "status?" |
+| `mirofish_cancel` | Cancel prediction | "cancel prediction", "stop simulation" |
+| `mirofish_chat` | Follow-up on report | "in the report...", "what's the biggest risk?" |
+| `mirofish_interview` | Interview specific Agent | "ask Agent #3", "interview Agent #5" |
+| `mirofish_report` | Get full report | "give me the full report" |
+| `mirofish_agents` | List all 55 Agents | "what agents are there?", "agent list" |
+
+### Gateway RPC
+
+For external scripts, CI/CD, frontend integration, or cron jobs:
+
+```bash
+# Prediction management
+openclaw gateway call mirofish.predict \
+  --params '{"topic": "Fed rate cut impact", "rounds": 10}'
+# → {"runId": "run-1710000000000"}
+
+openclaw gateway call mirofish.status --params '{"runId": "run-xxx"}'
+openclaw gateway call mirofish.cancel --params '{"runId": "run-xxx"}'
+openclaw gateway call mirofish.list   --params '{}'
+
+# Report interaction
+openclaw gateway call mirofish.chat \
+  --params '{"simId": "sim_xxx", "question": "What is the biggest risk?"}'
+
+openclaw gateway call mirofish.interview \
+  --params '{"simId": "sim_xxx", "agentId": 3, "question": "What do you think?"}'
+
+# Agents & reports
+openclaw gateway call mirofish.report  --params '{"simId": "sim_xxx"}'
+openclaw gateway call mirofish.agents  --params '{"simId": "sim_xxx"}'
+openclaw gateway call mirofish.posts   --params '{"simId": "sim_xxx"}'
+```
+
+### Discord Notifications
+
+Auto-push to Discord channel on prediction completion:
+
+```bash
+# Set in ~/.mirofish/.env
+MIROFISH_DISCORD_WEBHOOK=https://discord.com/api/webhooks/xxx/yyy
+```
+
+### Extension Architecture
+
+| Integration Point | File | Function |
+|:---|:---|:---|
+| Agent Tools | `src/tools.ts` | 7 LLM-callable tools |
+| Message Hook | `src/hooks.ts` | Keyword-triggered auto-prediction (disabled by default) |
+| Gateway RPC | `src/gateway.ts` | 10 RPC methods for external integration |
+| SSE Broadcaster | `src/progress-broadcaster.ts` | Real-time progress streaming |
+| Canvas Route | `src/canvas-route.ts` | `GET /mirofish/canvas` report visualization |
+| P2P Peer Discovery | `src/peer-discovery.ts` | Automatic peer detection |
+
+---
+
+## Advanced Usage
+
+### CLI
+
+You can also use the CLI directly without OpenClaw:
+
+```bash
+# ─── Prediction ───
+mirofish predict "Fed rate cut impact on tech stocks"        # Basic (default 20 rounds)
+mirofish predict "topic" --rounds=3                          # Custom rounds
+mirofish predict "topic" --canvas                            # Open Dashboard after
+mirofish predict "topic" --json-stream                       # NDJSON stream output
+mirofish predict "topic" --distributed --workers=3           # Distributed (Docker Workers)
+mirofish predict "topic" --p2p                               # P2P multi-node
+
+# ─── Report Interaction ───
+mirofish chat sim_xxx "Which views are most extreme?"        # Follow-up with Report Agent
+mirofish interview sim_xxx 0 "What do you think?"            # Interview Agent #0
+mirofish report sim_xxx                                      # Get full report
+mirofish canvas sim_xxx                                      # Visual Dashboard
+
+# ─── Backend Management ───
+mirofish serve start                                         # Start backend (Docker first)
+mirofish serve stop                                          # Stop backend
+mirofish serve status                                        # Check backend status
+
+# ─── P2P Peer Management ───
+mirofish peers add http://192.168.1.100:5001 "lab"           # Add peer
+mirofish peers remove lab                                    # Remove peer
+mirofish peers list                                          # List all peers
+mirofish peers health                                        # Health check all peers
+mirofish meta "topic"                                        # Merge P2P consensus report
+
+# ─── Other ───
+mirofish projects                                            # List all projects
+mirofish status sim_xxx                                      # Check simulation progress
+mirofish env                                                 # Show environment config
+```
+
+### Three Operating Modes
 
 ```
 Mode 1: Standalone Prediction ✅ Done
@@ -56,228 +254,52 @@ Mode 3: On-chain Attestation 🚧 Planned
 └──────────────────────────────────┘
 ```
 
-## Three-Layer Architecture
+### P2P Multi-Node Deployment
 
-| Layer | Technology | Status |
-|:---|:---|:---|
-| **Deduction** | MiroFish Engine (GraphRAG + OASIS multi-agent simulation + Report AI) | ✅ Done |
-| **Agent** | OpenClaw Gateway Network (P2P communication, task dispatch, Canvas visualization) | ✅ Done |
-| **Consensus** | Cosmos SDK AppChain (prediction attestation, reputation scoring, zero gas fees) | 🚧 Planned |
-
-## Quick Start
-
-### Prerequisites
-
-- **Node.js** >= 18
-- **Docker Desktop** (recommended) or Python 3.11+ with [uv](https://github.com/astral-sh/uv)
-- **LLM API Key** (OpenAI format, any compatible API, recommended >= 14B parameter model)
-- **[Zep Cloud](https://www.getzep.com/) API Key** (for GraphRAG, free tier works)
-
-### Installation
+#### Docker Quick Start (3 Nodes)
 
 ```bash
-git clone --recursive https://github.com/ImL1s/miro_claw.git
-cd miro_claw
+docker compose -f docker-compose.p2p-3nodes.yml build
+docker compose -f docker-compose.p2p-3nodes.yml up -d
 
-# Clone MiroFish backend (external dependency, not a submodule)
-git clone https://github.com/666ghj/MiroFish.git
+# Health check
+curl http://localhost:5011/health   # Node1
+curl http://localhost:5012/health   # Node2
+curl http://localhost:5013/health   # Node3
+
+# Start P2P prediction from Node1
+docker exec mirofish-p2p-node1 node /app/cli/bin/mirofish.js \
+  predict "What if Bitcoin breaks 200K" --p2p --rounds=3
+
+docker compose -f docker-compose.p2p-3nodes.yml down
 ```
 
-### First-time Setup
-
-```bash
-# 1. Start backend (auto-pulls Docker image on first run)
-node cli/bin/mirofish.js serve start
-# → Generates ~/.mirofish/.env template if not configured
-
-# 2. Fill in API keys
-#    Edit ~/.mirofish/.env with LLM_API_KEY, LLM_BASE_URL, ZEP_API_KEY
-
-# 3. Restart
-node cli/bin/mirofish.js serve start
-
-# 4. Verify environment
-node cli/bin/mirofish.js env
-```
-
-> **Apple Silicon users**: No ARM64 Docker image available. The CLI auto-falls back to native mode (requires a local `MiroFish/` clone and `uv`).
-
-### Run a Prediction
-
-```bash
-# Basic prediction (default 20 rounds)
-mirofish predict "Impact of Fed rate cuts on tech stocks"
-
-# Custom round count (start with 10, increase to 40 if results are good)
-mirofish predict "Topic" --rounds=10
-
-# Auto-open visual Dashboard after completion
-mirofish predict "Topic" --canvas
-
-# P2P distributed prediction (requires peers)
-mirofish predict "Topic" --p2p
-```
-
-### Interactive Features
-
-```bash
-# Follow-up questions on the report
-mirofish chat <sim_id> "Which KOLs had the most extreme views?"
-
-# Interview a specific Agent
-mirofish interview <sim_id> 0 "What's your take on this?"
-
-# Visual Dashboard
-mirofish canvas <sim_id>
-```
-
-## User-Facing Usage
-
-When you install the MiroFish skill into OpenClaw, all functionalities are automatically enabled without needing to understand the underlying infrastructure:
-
-### 1. Agent Auto-Trigger via Chat
-Simply type prediction keywords in the chat.
-> "Predict Bitcoin's trend next week" → Agent automatically calls the `mirofish_predict` tool → SSE pushes real-time progress → Returns the result upon completion.
-
-### 2. Gateway RPC
-Suitable for system integrations or external script calls.
-```bash
-openclaw gateway call mirofish.predict --params '{"topic": "..."}'
-# Returns immediately: {"runId": "run-xxx"}
-
-openclaw gateway call mirofish.status --params '{"runId": "run-xxx"}'
-```
-
-### 3. CLI operations
-Suitable for advanced developers.
-```bash
-mirofish predict "Bitcoin's trend next week"
-```
-(Prediction results are printed directly to the terminal, and system notifications are provided)
-
-## Infrastructure Deployment Modes
-
-We provide three underlying deployment modes to suit different team sizes:
-
-### 1. Single Machine Docker Compose (Default & Easiest)
-```bash
-docker compose -f docker-compose.p2p.yml up
-```
-Coordinator and Worker(s) run on the same machine. Ideal for local development and demos.
-
-### 2. LAN Distributed Deployment (Multi-Machine)
-Suitable for labs or teams looking to distribute GPU workloads.
-```bash
-# Node A — Coordinator
-docker run -p 50051:50051 -v ./certs:/app/certs oasis-coordinator
-
-# Nodes B, C — Workers
-docker run -e COORDINATOR_ADDR=192.168.x.x:50051 -v ./certs:/app/certs:ro oasis-worker
-```
-Secured via TLS and token authentication (`MIROFISH_CLUSTER_TOKEN`).
-
-### 3. Native Mode (No Docker)
-Suitable for Python developers to step-through debug.
-```bash
-cd oasis-distributed && MIROFISH_CLUSTER_TOKEN=your-token python3 scripts/run_coordinator.py   # Terminal 1
-cd oasis-distributed && MIROFISH_CLUSTER_TOKEN=your-token COORDINATOR_ADDR=localhost:50051 python3 scripts/run_worker.py   # Terminal 2
-```
-
-## P2P Distributed Prediction
-
-Multiple machines each run MiroFish independently, share results with each other, then merge into a consensus analysis.
-
-### Set Up Peers
+#### Manual Mode (Cross-LAN)
 
 ```bash
 mirofish peers add http://192.168.1.200:5001 "lab-server"
 mirofish peers add http://192.168.1.201:5001 "gpu-box"
-mirofish peers list
 mirofish peers health
+mirofish predict "topic" --p2p
+mirofish meta "topic"
 ```
 
-### Distributed Prediction Flow
+> Set `P2P_AUTO_PREDICT=true` in `~/.mirofish/.env` on peer machines.
+
+### OASIS Distributed (gRPC Worker Mode)
+
+Split 55 Agents across multiple machines:
 
 ```bash
-# --p2p: broadcasts seed to all peers, runs locally in parallel, broadcasts result
-mirofish predict "What if Bitcoin breaks 150K" --p2p
+# Docker Compose
+cd oasis-distributed && docker compose -f docker-compose.distributed.yml up
 
-# Collect results from all nodes, generate consensus report
-mirofish meta "What if Bitcoin breaks 150K"
+# Native mode
+python3 scripts/run_coordinator.py   # Terminal 1
+python3 scripts/run_worker.py        # Terminal 2
 ```
 
-```
-Node A (your machine)       Node B (lab-server)       Node C (gpu-box)
-──────────────────        ──────────────          ────────────
-1. Broadcast seed ────────> Receives seed          Receives seed
-2. Local prediction starts  [Auto/manual predict]  [Auto/manual predict]
-3. Local prediction done    Prediction done        Prediction done
-4. Broadcast result ──────> Stores result          Stores result
-5. mirofish meta ←───────── Returns result ─────── Returns result
-   → Merged consensus report
-```
-
-### Auto-Predict (Optional)
-
-Let peers auto-predict when they receive a seed:
-
-```bash
-# Add to ~/.mirofish/.env
-P2P_AUTO_PREDICT=true
-```
-
-> ⚠️ Auto-predict consumes LLM API quota. Disabled by default.
-
-### P2P API
-
-Each MiroFish backend automatically exposes:
-
-| Endpoint | Method | Description |
-|:---|:---|:---|
-| `/api/p2p/predict` | POST | Receive seed broadcast |
-| `/api/p2p/result` | POST | Receive prediction results from other nodes |
-| `/api/p2p/results?topic=...` | GET | Query collected results |
-| `/api/p2p/seeds` | GET | View received seeds |
-
-## Full Command Reference
-
-| Command | Description |
-|:---|:---|
-| `mirofish predict "topic"` | Full prediction (auto-starts backend) |
-| `mirofish predict "topic" --rounds=10` | Set simulation rounds |
-| `mirofish predict "topic" --p2p` | P2P distributed prediction |
-| `mirofish predict "topic" --canvas` | Auto-open Dashboard after completion |
-| `mirofish predict "topic" --json-stream` | NDJSON output (for Extension IPC) |
-| `mirofish serve start\|stop\|status` | Manage MiroFish backend |
-| `mirofish canvas <sim_id>` | Open visual Dashboard |
-| `mirofish projects` | List all projects |
-| `mirofish status <sim_id>` | Check simulation progress |
-| `mirofish report <sim_id>` | Get prediction report |
-| `mirofish chat <sim_id> "question"` | Follow-up questions on report |
-| `mirofish interview <sim_id> <agent_id> "question"` | Interview a specific Agent |
-| `mirofish peers add\|remove\|list\|health` | Manage P2P peer nodes |
-| `mirofish meta "topic"` | Merge P2P consensus report |
-| `mirofish env` | Show environment configuration |
-
-## OpenClaw Extension
-
-The extension integrates MiroFish into OpenClaw Gateway, providing:
-
-- **Agent Tool** — LLM-callable `mirofish_predict` (async, returns runId immediately)
-- **Message Hook** — Auto-trigger predictions from chat keywords (disabled by default)
-- **Gateway RPC** — `mirofish.predict` / `.status` / `.cancel` / `.list`
-- **SSE Real-time Push** — Live progress streaming to clients
-- **Canvas Route** — `GET /mirofish/canvas` for report visualization
-
-```bash
-# Install
-cd extensions/mirofish && npm install && npx tsc
-
-# Test via Gateway RPC
-openclaw gateway call mirofish.predict --params '{"topic": "Your topic"}'
-openclaw gateway call mirofish.status --params '{"runId": "run-xxx"}'
-openclaw gateway call mirofish.list --params '{}'
-```
+---
 
 ## Environment Variables
 
@@ -317,18 +339,20 @@ rm -f ~/.mirofish/backend.pid
 
 ```
 miro_claw/
+├── extensions/mirofish/        # ⭐ OpenClaw Extension (TypeScript)
+│   ├── index.ts                # Plugin entry — 6 integration points
+│   └── src/                    # RunManager, tools, hooks, gateway, SSE, chat
+├── skills/mirofish-predict/    # ⭐ OpenClaw Skill definition (SKILL.md)
 ├── cli/                        # mirofish-cli (Node.js, zero runtime deps)
 │   ├── bin/mirofish.js         # CLI entry point (12 subcommands)
 │   ├── lib/                    # Core: predict, docker, api, p2p, notify, canvas
 │   ├── canvas/                 # Canvas Dashboard (HTML + JS + CSS)
 │   └── test/                   # Unit tests + E2E (e2e-p2p.sh)
 ├── core/                       # Shared types & constants (@mirofish/core)
-├── extensions/mirofish/        # OpenClaw Extension (TypeScript)
-│   ├── index.ts                # Plugin entry — 6 integration points
-│   └── src/                    # RunManager, tools, hooks, gateway, SSE, chat
 ├── oasis-distributed/          # Distributed Agent execution layer (gRPC, Docker)
-├── skills/mirofish-predict/    # OpenClaw Skill definition (SKILL.md)
 ├── MiroFish/                   # Core Engine — clone separately (Python Flask + Vue 3)
+├── Dockerfile.p2p-node         # P2P Docker node image
+├── docker-compose.p2p-3nodes.yml  # 3-node P2P Docker cluster
 ├── docs/                       # Vision, phase plans, distributed design docs
 └── docker-compose.p2p.yml      # Multi-node P2P Docker setup
 ```
@@ -340,9 +364,10 @@ miro_claw/
 | Phase 1 | Gateway integrates MiroFish API, chat-triggered predictions | ✅ Done |
 | Phase 2 | Canvas + push notifications + SSE progress + Report Chat | ✅ Done |
 | Phase 3 | P2P seed/result broadcast + consensus reports | ✅ Done |
-| Phase 4 | Distributed simulation: cross-node Agent allocation (gRPC) | 🚧 Designing |
-| Phase 5 | Cosmos SDK AppChain: attestation + reputation MVP | 📋 Planned |
-| Phase 6 | Post-hoc verification + leaderboard + subscription economy | 📋 Planned |
+| Phase 4 | P2P Docker 3-node cluster verification + Auto-Predict | ✅ Done |
+| Phase 5 | Distributed simulation: cross-node Agent allocation (gRPC) | 🚧 Designing |
+| Phase 6 | Cosmos SDK AppChain: attestation + reputation MVP | 📋 Planned |
+| Phase 7 | Post-hoc verification + leaderboard + subscription economy | 📋 Planned |
 
 ## License
 

@@ -19,21 +19,219 @@
 
 ## Demo
 
-https://github.com/ImL1s/miro_claw/releases/download/v0.4.0-demo/mirofish-discord-demo.mp4
+<div align="center">
+
+![MiroClaw Demo](docs/mirofish-demo.gif)
+
+*55 AI Agent 群体智能推演 — 从对话到预测报告*
+
+</div>
 
 ## 这是什么？
 
-MiroClaw 把 [MiroFish](https://github.com/666ghj/MiroFish)（55 个 AI Agent 在模拟社群平台上互动的推演引擎）包装成 CLI 工具和 [OpenClaw](https://openclaw.ai) 扩展，让你一行命令就能启动群体智能推演。
+MiroClaw 是 [OpenClaw](https://openclaw.ai) 的 AI Agent 扩展，把 [MiroFish](https://github.com/666ghj/MiroFish)（55 个 AI Agent 模拟社群互动的推演引擎）接入 OpenClaw Gateway。
 
-**你只需要输入一句话：**
+**在 OpenClaw 聊天中直接说：**
 
-```bash
-mirofish predict "如果比特币突破 15 万美元，加密市场会怎样？"
+```
+你：帮我预测如果比特币突破 20 万美元，市场会怎么反应
+Agent：正在启动 MiroFish 推演... [55 Agent 社群模拟] → 完成！
 ```
 
-MiroClaw 会自动完成：启动后端 → 构建知识图谱 → 生成 55 个 Agent → 运行社群模拟 → 输出预测报告。
+MiroClaw 自动完成：启动后端 → 构建知识图谱 → 生成 55 个 Agent → 运行社群模拟 → 输出预测报告。
 
-## 三种运作模式
+## 三层架构
+
+| 层级 | 技术 | 状态 |
+|:---|:---|:---|
+| **推演层** | MiroFish Engine（GraphRAG + OASIS 多智能体模拟 + Report AI） | ✅ 已完成 |
+| **Agent 层** | OpenClaw Gateway Network（P2P 通信、任务调度、Canvas 可视化） | ✅ 已完成 |
+| **共识层** | Cosmos SDK AppChain（预测存证、信誉积分、零手续费） | 🚧 规划中 |
+
+## 快速开始：安装到 OpenClaw
+
+### 前置需求
+
+- **[OpenClaw](https://openclaw.ai)** Gateway 已安装并运行
+- **Node.js** >= 18
+- **Docker Desktop**（推荐）或 Python 3.11+ 搭配 [uv](https://github.com/astral-sh/uv)
+- **LLM API Key**（OpenAI 格式，支持任何兼容 API，建议 >= 14B 参数模型）
+- **[Zep Cloud](https://www.getzep.com/) API Key**（GraphRAG 用，免费 tier 即可）
+
+### 安装（一行搞定）
+
+```bash
+openclaw skills install mirofish-predict
+```
+
+安装后设置 API Key：
+
+```bash
+# 编辑 ~/.mirofish/.env，填入以下三个 Key：
+LLM_API_KEY=your-llm-api-key
+LLM_BASE_URL=http://your-llm-server:1234/v1
+ZEP_API_KEY=your-zep-cloud-key
+
+# 重启 Gateway
+openclaw gateway restart
+```
+
+> **Apple Silicon 用户**：目前无 ARM64 Docker image，CLI 会自动切换到原生模式。
+
+<details>
+<summary>手动安装（开发者模式）</summary>
+
+```bash
+git clone --recursive https://github.com/ImL1s/miro_claw.git
+cd miro_claw
+git clone https://github.com/666ghj/MiroFish.git
+
+# 安装 Extension + Skill
+cp -r extensions/mirofish/ ~/.openclaw/extensions/mirofish/
+cd ~/.openclaw/extensions/mirofish && npm install && npx tsc && cd -
+cp -r skills/mirofish-predict/ ~/.openclaw/skills/mirofish-predict/
+
+# CLI symlink
+ln -sf $(pwd)/cli/bin/mirofish.js /usr/local/bin/mirofish
+
+openclaw gateway restart
+```
+
+</details>
+
+### 开始使用
+
+安装完成后，在 OpenClaw 聊天中用自然语言即可触发推演：
+
+```
+🧑 你：帮我预测如果比特币突破 20 万美元，市场会怎么反应
+
+🤖 Agent：正在启动 MiroFish 推演...
+         📡 SSE 实时推送：
+           Step 1/7 构建知识图谱 ✅
+           Step 2/7 生成 55 个 AI Agent ⏳
+           ...
+           Step 7/7 产出预测报告 ✅
+         
+         📊 推演完成！报告摘要：
+         比特币突破20万美元将触发跨领域连锁反应...
+         Simulation ID: sim_c6167c07bf05
+
+🧑 你：帮我问一下 Agent #3 对这件事怎么看
+
+🤖 Agent：[调用 mirofish_interview]
+         Agent #3（@CryptoKing_BTC，19岁科技爱好者）回应：
+         「我觉得这是不可避免的趋势，机构资金的涌入...」
+
+🧑 你：这份报告中最悲观的观点是什么？
+
+🤖 Agent：[调用 mirofish_chat]
+         根据报告分析，最悲观的观点来自 Agent #12...
+```
+
+### Agent Tools 一览
+
+LLM 会根据 Skill 描述自动选用对应工具：
+
+| Tool | 功能 | 典型触发语 |
+|:---|:---|:---|
+| `mirofish_predict` | 启动新推演 | 「预测...」「推演...」「分析...的影响」 |
+| `mirofish_status` | 查询推演进度 | 「推演到哪了？」「进度如何？」 |
+| `mirofish_cancel` | 取消推演 | 「取消推演」「停止模拟」 |
+| `mirofish_chat` | 追问报告 | 「报告中...」「最大风险是什么？」 |
+| `mirofish_interview` | 采访特定 Agent | 「问 Agent #3」「采访第 5 个 Agent」 |
+| `mirofish_report` | 获取完整报告 | 「给我完整报告」「报告全文」 |
+| `mirofish_agents` | 列出 55 个 Agent | 「有哪些 Agent？」「Agent 列表」 |
+
+### Gateway RPC
+
+适合外部脚本、CI/CD、前端集成、或 cron 定时排程：
+
+```bash
+# 推演管理
+openclaw gateway call mirofish.predict \
+  --params '{"topic": "美联储降息影响", "rounds": 10}'
+# → {"runId": "run-1710000000000"}
+
+openclaw gateway call mirofish.status --params '{"runId": "run-xxx"}'
+openclaw gateway call mirofish.cancel --params '{"runId": "run-xxx"}'
+openclaw gateway call mirofish.list   --params '{}'
+
+# 报告互动
+openclaw gateway call mirofish.chat \
+  --params '{"simId": "sim_xxx", "question": "最大风险是什么？"}'
+
+openclaw gateway call mirofish.interview \
+  --params '{"simId": "sim_xxx", "agentId": 3, "question": "你怎么看？"}'
+
+# Agent 与报告
+openclaw gateway call mirofish.report  --params '{"simId": "sim_xxx"}'
+openclaw gateway call mirofish.agents  --params '{"simId": "sim_xxx"}'
+openclaw gateway call mirofish.posts   --params '{"simId": "sim_xxx"}'
+```
+
+### Discord 通知
+
+推演完成后自动推送到 Discord 频道：
+
+```bash
+# 在 ~/.mirofish/.env 设置
+MIROFISH_DISCORD_WEBHOOK=https://discord.com/api/webhooks/xxx/yyy
+```
+
+### Extension 架构
+
+| 集成点 | 文件 | 功能 |
+|:---|:---|:---|
+| Agent Tools | `src/tools.ts` | 7 个 LLM 可调用的工具 |
+| Message Hook | `src/hooks.ts` | 聊天关键字自动触发推演（默认关闭） |
+| Gateway RPC | `src/gateway.ts` | 10 个 RPC 方法供外部系统集成 |
+| SSE Broadcaster | `src/progress-broadcaster.ts` | 推演进度实时推送 |
+| Canvas Route | `src/canvas-route.ts` | `GET /mirofish/canvas` 报告可视化 |
+| P2P Peer Discovery | `src/peer-discovery.ts` | 自动 Peer 发现 |
+
+---
+
+## 进阶用法
+
+### CLI 命令行
+
+不使用 OpenClaw 也可以直接用 CLI 完成所有操作：
+
+```bash
+# ─── 推演 ───
+mirofish predict "美联储降息对科技股的影响"                  # 基本推演（默认 20 轮）
+mirofish predict "主题" --rounds=3                          # 指定轮数
+mirofish predict "主题" --canvas                            # 推演后打开 Dashboard
+mirofish predict "主题" --json-stream                       # NDJSON 串流输出
+mirofish predict "主题" --distributed --workers=3           # 分布式（Docker Worker）
+mirofish predict "主题" --p2p                               # P2P 多节点推演
+
+# ─── 报告互动 ───
+mirofish chat sim_xxx "哪些观点最极端？"                     # 追问 Report Agent
+mirofish interview sim_xxx 0 "你怎么看？"                    # 采访 Agent #0
+mirofish report sim_xxx                                     # 获取完整报告
+mirofish canvas sim_xxx                                     # 可视化 Dashboard
+
+# ─── 后端管理 ───
+mirofish serve start                                        # 启动后端（Docker 优先）
+mirofish serve stop                                         # 停止后端
+mirofish serve status                                       # 查看后端状态
+
+# ─── P2P 节点管理 ───
+mirofish peers add http://192.168.1.100:5001 "lab"          # 新增 peer
+mirofish peers remove lab                                   # 移除 peer
+mirofish peers list                                         # 列出所有 peers
+mirofish peers health                                       # 检查所有 peer 健康
+mirofish meta "主题"                                        # 合并 P2P 共识报告
+
+# ─── 其他 ───
+mirofish projects                                           # 列出所有项目
+mirofish status sim_xxx                                     # 查询模拟进度
+mirofish env                                                # 显示环境设置
+```
+
+### 三种运作模式
 
 ```
 模式 1：单机推演 ✅ 已完成
@@ -56,228 +254,52 @@ MiroClaw 会自动完成：启动后端 → 构建知识图谱 → 生成 55 个
 └──────────────────────────────────┘
 ```
 
-## 三层架构
+### P2P 多节点部署
 
-| 层级 | 技术 | 状态 |
-|:---|:---|:---|
-| **推演层** | MiroFish Engine（GraphRAG + OASIS 多智能体模拟 + Report AI） | ✅ 已完成 |
-| **Agent 层** | OpenClaw Gateway Network（P2P 通信、任务调度、Canvas 可视化） | ✅ 已完成 |
-| **共识层** | Cosmos SDK AppChain（预测存证、信誉积分、零手续费） | 🚧 规划中 |
-
-## 快速开始
-
-### 前置需求
-
-- **Node.js** >= 18
-- **Docker Desktop**（推荐）或 Python 3.11+ 搭配 [uv](https://github.com/astral-sh/uv)
-- **LLM API Key**（OpenAI 格式，支持任何兼容 API，建议 >= 14B 参数模型）
-- **[Zep Cloud](https://www.getzep.com/) API Key**（GraphRAG 用，免费 tier 即可）
-
-### 安装
+#### Docker 一键启动 3 节点
 
 ```bash
-git clone --recursive https://github.com/ImL1s/miro_claw.git
-cd miro_claw
+docker compose -f docker-compose.p2p-3nodes.yml build
+docker compose -f docker-compose.p2p-3nodes.yml up -d
 
-# 克隆 MiroFish 后端（外部依赖，非子模块）
-git clone https://github.com/666ghj/MiroFish.git
+# 健康检查
+curl http://localhost:5011/health   # Node1
+curl http://localhost:5012/health   # Node2
+curl http://localhost:5013/health   # Node3
+
+# 从 Node1 发起 P2P 推演
+docker exec mirofish-p2p-node1 node /app/cli/bin/mirofish.js \
+  predict "如果比特币突破20万" --p2p --rounds=3
+
+docker compose -f docker-compose.p2p-3nodes.yml down
 ```
 
-### 首次设置
-
-```bash
-# 1. 启动后端（首次自动拉取 Docker image）
-node cli/bin/mirofish.js serve start
-# → 若尚未设置，会在 ~/.mirofish/.env 产生模板
-
-# 2. 填入 API Key
-#    编辑 ~/.mirofish/.env，填入 LLM_API_KEY、LLM_BASE_URL、ZEP_API_KEY
-
-# 3. 重新启动
-node cli/bin/mirofish.js serve start
-
-# 4. 确认环境
-node cli/bin/mirofish.js env
-```
-
-> **Apple Silicon 用户**：目前无 ARM64 Docker image，CLI 会自动切换到原生模式（需要本地 `MiroFish/` clone 和 `uv`）。
-
-### 开始推演
-
-```bash
-# 基本推演（默认 20 轮）
-mirofish predict "美联储降息对科技股的影响"
-
-# 指定轮数（先用 10 轮试探，效果好再加到 40）
-mirofish predict "主题" --rounds=10
-
-# 推演完成后打开可视化 Dashboard
-mirofish predict "主题" --canvas
-
-# P2P 分散推演（需先设置 peers）
-mirofish predict "主题" --p2p
-```
-
-### 互动功能
-
-```bash
-# 对报告追问
-mirofish chat <sim_id> "哪些 KOL 的观点最极端？"
-
-# 采访特定 Agent
-mirofish interview <sim_id> 0 "你对这件事有什么看法？"
-
-# 可视化 Dashboard
-mirofish canvas <sim_id>
-```
-
-## 用户使用方式 (User-Facing)
-
-当您将 MiroFish skill 安装至 OpenClaw 后，所有功能自动启用，无需了解底层架构：
-
-### 1. Agent 自动触发对话
-直接在聊天中输入预测关键字。
-> 「帮我预测比特币下周走势」→ Agent 自动调用 `mirofish_predict` 工具 → SSE 实时推送进度 → 完成后回报结果。
-
-### 2. Gateway RPC
-适合系统集成或外部脚本调用。
-```bash
-openclaw gateway call mirofish.predict --params '{"topic": "..."}'
-# 立即返回 {"runId": "run-xxx"}
-
-openclaw gateway call mirofish.status --params '{"runId": "run-xxx"}'
-```
-
-### 3. CLI 命令行操作
-适合高级开发者。
-```bash
-mirofish predict "比特币下周走势"
-```
-（推演结果直接打印于终端，并提供系统通知）
-
-## 基础设施部署方式 (Infrastructure)
-
-针对不同团队规模，提供三种底层部署方式：
-
-### 1. 单机 Docker Compose (默认最简单)
-```bash
-docker compose -f docker-compose.p2p.yml up
-```
-Coordinator 与 Worker(s) 运行于同一台机器，适合本地开发与 Demo 呈现。
-
-### 2. LAN 局域网分布式部署 (多台机器)
-适合实验室、团队切分 GPU 负载的场景。
-```bash
-# 机器 A — Coordinator (调度中心)
-docker run -p 50051:50051 -v ./certs:/app/certs oasis-coordinator
-
-# 机器 B, C — Workers (执行节点)
-docker run -e COORDINATOR_ADDR=192.168.x.x:50051 -v ./certs:/app/certs:ro oasis-worker
-```
-具备 TLS 及 token (`MIROFISH_CLUSTER_TOKEN`) 安全连接防护。
-
-### 3. 原生模式 (无需 Docker)
-适合 Python 开发者单步追踪调试。
-```bash
-cd oasis-distributed && MIROFISH_CLUSTER_TOKEN=your-token python3 scripts/run_coordinator.py   # 终端 1
-cd oasis-distributed && MIROFISH_CLUSTER_TOKEN=your-token COORDINATOR_ADDR=localhost:50051 python3 scripts/run_worker.py   # 终端 2
-```
-
-## P2P 分散式推演
-
-多台机器各自跑 MiroFish，互相分享推演结果，最后合并分析。
-
-### 设置 Peers
+#### 手动模式（跨 LAN 多机）
 
 ```bash
 mirofish peers add http://192.168.1.200:5001 "lab-server"
 mirofish peers add http://192.168.1.201:5001 "gpu-box"
-mirofish peers list
 mirofish peers health
+mirofish predict "主题" --p2p
+mirofish meta "主题"
 ```
 
-### 分散推演流程
+> 在 peer 机器上设置 `P2P_AUTO_PREDICT=true`（`~/.mirofish/.env`）让收到种子后自动推演。
+
+### OASIS 分布式（gRPC Worker 模式）
+
+将 55 个 Agent 分散到多台机器执行：
 
 ```bash
-# --p2p：先广播种子给所有 peers，本机同时推演，完成后广播结果
-mirofish predict "如果比特币突破15万" --p2p
+# Docker Compose
+cd oasis-distributed && docker compose -f docker-compose.distributed.yml up
 
-# 收集所有节点的结果，合并产生共识报告
-mirofish meta "如果比特币突破15万"
+# 原生模式
+python3 scripts/run_coordinator.py   # 终端 1
+python3 scripts/run_worker.py        # 终端 2
 ```
 
-```
-Node A (你的机器)           Node B (lab-server)       Node C (gpu-box)
-──────────────────        ──────────────          ────────────
-1. 广播种子 ──────────>  收到种子                 收到种子
-2. 本机推演开始           [自动/手动推演]          [自动/手动推演]
-3. 本机推演完成           推演完成                 推演完成
-4. 广播结果 ──────────>  储存结果                 储存结果
-5. mirofish meta ←────── 回传结果 ───────────── 回传结果
-   → 合并共识报告
-```
-
-### Auto-Predict（选择性）
-
-让 peer 收到种子后自动推演：
-
-```bash
-# 在 ~/.mirofish/.env 加入
-P2P_AUTO_PREDICT=true
-```
-
-> ⚠️ Auto-predict 会消耗 LLM API quota，默认关闭。
-
-### P2P API
-
-每个 MiroFish 后端自动提供：
-
-| Endpoint | 方法 | 说明 |
-|:---|:---|:---|
-| `/api/p2p/predict` | POST | 接收种子广播 |
-| `/api/p2p/result` | POST | 接收其他节点推演结果 |
-| `/api/p2p/results?topic=...` | GET | 查询已收集结果 |
-| `/api/p2p/seeds` | GET | 查看收到的种子列表 |
-
-## 完整命令参考
-
-| 命令 | 功能 |
-|:---|:---|
-| `mirofish predict "主题"` | 完整推演（自动启动后端） |
-| `mirofish predict "主题" --rounds=10` | 指定推演轮数 |
-| `mirofish predict "主题" --p2p` | P2P 分散推演 |
-| `mirofish predict "主题" --canvas` | 推演后自动打开 Dashboard |
-| `mirofish predict "主题" --json-stream` | NDJSON 输出（供 Extension 使用） |
-| `mirofish serve start\|stop\|status` | 管理 MiroFish 后端 |
-| `mirofish canvas <sim_id>` | 打开可视化 Dashboard |
-| `mirofish projects` | 列出所有项目 |
-| `mirofish status <sim_id>` | 查询模拟进度 |
-| `mirofish report <sim_id>` | 获取推演报告 |
-| `mirofish chat <sim_id> "问题"` | 对报告追问 |
-| `mirofish interview <sim_id> <agent_id> "问题"` | 采访特定 Agent |
-| `mirofish peers add\|remove\|list\|health` | 管理 P2P 节点 |
-| `mirofish meta "主题"` | 合并 P2P 共识报告 |
-| `mirofish env` | 显示环境设置 |
-
-## OpenClaw Extension
-
-Extension 将 MiroFish 整合进 OpenClaw Gateway，提供：
-
-- **Agent Tool** — LLM 可直接调用 `mirofish_predict`（异步，立即返回 runId）
-- **Message Hook** — 聊天中关键字自动触发推演（默认关闭）
-- **Gateway RPC** — `mirofish.predict` / `.status` / `.cancel` / `.list`
-- **SSE 实时推送** — 推演进度实时推送至客户端
-- **Canvas 路由** — `GET /mirofish/canvas` 报告可视化
-
-```bash
-# 安装
-cd extensions/mirofish && npm install && npx tsc
-
-# 通过 Gateway RPC 测试
-openclaw gateway call mirofish.predict --params '{"topic": "推演主题"}'
-openclaw gateway call mirofish.status --params '{"runId": "run-xxx"}'
-openclaw gateway call mirofish.list --params '{}'
-```
+---
 
 ## 环境变量
 
@@ -317,18 +339,20 @@ rm -f ~/.mirofish/backend.pid
 
 ```
 miro_claw/
+├── extensions/mirofish/        # ⭐ OpenClaw Extension (TypeScript)
+│   ├── index.ts                # 插件入口 — 6 个集成点
+│   └── src/                    # RunManager, tools, hooks, gateway, SSE, chat
+├── skills/mirofish-predict/    # ⭐ OpenClaw Skill 定义 (SKILL.md)
 ├── cli/                        # mirofish-cli (Node.js, zero runtime deps)
 │   ├── bin/mirofish.js         # CLI 入口（12 个子命令）
 │   ├── lib/                    # 核心模块：predict, docker, api, p2p, notify, canvas
 │   ├── canvas/                 # Canvas Dashboard（HTML + JS + CSS）
 │   └── test/                   # 单元测试 + E2E (e2e-p2p.sh)
 ├── core/                       # 共用类型与常量 (@mirofish/core)
-├── extensions/mirofish/        # OpenClaw Extension (TypeScript)
-│   ├── index.ts                # 插件入口 — 6 个集成点
-│   └── src/                    # RunManager, tools, hooks, gateway, SSE, chat
 ├── oasis-distributed/          # 分布式 Agent 执行层 (gRPC, Docker)
-├── skills/mirofish-predict/    # OpenClaw Skill 定义 (SKILL.md)
 ├── MiroFish/                   # 核心引擎 — 需手动 clone (Python Flask + Vue 3)
+├── Dockerfile.p2p-node         # P2P Docker 节点镜像
+├── docker-compose.p2p-3nodes.yml  # 3 节点 P2P Docker 集群
 ├── docs/                       # 愿景、阶段计划、分布式设计文档
 └── docker-compose.p2p.yml      # 多节点 P2P Docker 配置
 ```
@@ -340,9 +364,10 @@ miro_claw/
 | Phase 1 | Gateway 整合 MiroFish API，对话触发推演 | ✅ 完成 |
 | Phase 2 | Canvas + 推送 + SSE 实时进度 + Report Chat | ✅ 完成 |
 | Phase 3 | P2P 种子/结果广播 + 共识报告 | ✅ 完成 |
-| Phase 4 | 分布式模拟：跨节点 Agent 分配（gRPC） | 🚧 设计中 |
-| Phase 5 | Cosmos SDK AppChain：存证 + 信誉 MVP | 📋 规划中 |
-| Phase 6 | 事后验证 + 排行榜 + 订阅经济 | 📋 规划中 |
+| Phase 4 | P2P Docker 3 节点集群验证 + Auto-Predict | ✅ 完成 |
+| Phase 5 | 分布式模拟：跨节点 Agent 分配（gRPC） | 🚧 设计中 |
+| Phase 6 | Cosmos SDK AppChain：存证 + 信誉 MVP | 📋 规划中 |
+| Phase 7 | 事后验证 + 排行榜 + 订阅经济 | 📋 规划中 |
 
 ## License
 
