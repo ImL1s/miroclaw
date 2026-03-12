@@ -17,6 +17,13 @@
 
 ---
 
+## Demo
+
+<!-- 將影片上傳至 GitHub Issue 後，把下方 URL 替換為實際連結 -->
+<!-- https://github.com/user-attachments/assets/YOUR-VIDEO-ID -->
+
+> 上傳 demo 影片後取消註解上方 URL，GitHub 會自動渲染為影片播放器。
+
 ## 這是什麼？
 
 MiroClaw 把 [MiroFish](https://github.com/666ghj/MiroFish)（55 個 AI Agent 在模擬社群平台上互動的推演引擎）包裝成 CLI 工具和 [OpenClaw](https://openclaw.ai) 擴充套件，讓你一行指令就能啟動群體智能推演。
