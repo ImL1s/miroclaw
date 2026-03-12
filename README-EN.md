@@ -2,9 +2,9 @@
 
 # MiroClaw
 
-**Decentralized Swarm Intelligence Prediction Protocol**
+**55 AI Agent Swarm Intelligence Prediction Engine — Standalone CLI · P2P Multi-Node Consensus**
 
-[MiroFish](https://github.com/666ghj/MiroFish) (55 AI Agents) × [OpenClaw](https://openclaw.ai) Gateway × Cosmos SDK
+[MiroFish](https://github.com/666ghj/MiroFish) × [OpenClaw](https://openclaw.ai) Gateway
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D18-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
@@ -40,13 +40,12 @@ Agent: Starting MiroFish prediction... [55 Agent social simulation] → Done!
 
 MiroClaw automatically: starts the backend → builds a knowledge graph → spawns 55 Agents → runs social simulation → outputs a prediction report.
 
-## Three-Layer Architecture
+## Architecture
 
 | Layer | Technology | Status |
 |:---|:---|:---|
 | **Deduction** | MiroFish Engine (GraphRAG + OASIS multi-agent simulation + Report AI) | ✅ Done |
 | **Agent** | OpenClaw Gateway Network (P2P communication, task dispatch, Canvas visualization) | ✅ Done |
-| **Consensus** | Cosmos SDK AppChain (prediction attestation, reputation scoring, zero gas fees) | 🚧 Planned |
 
 ## Quick Start: Install to OpenClaw
 

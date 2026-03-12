@@ -2,9 +2,9 @@
 
 # MiroClaw
 
-**去中心化群體智能預測協議**
+**55 AI Agent 群體智能預測引擎 — 單機推演 · P2P 多節點共識**
 
-[MiroFish](https://github.com/666ghj/MiroFish) (55 AI Agents) × [OpenClaw](https://openclaw.ai) Gateway × Cosmos SDK
+[MiroFish](https://github.com/666ghj/MiroFish) × [OpenClaw](https://openclaw.ai) Gateway
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D18-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
@@ -40,13 +40,12 @@ Agent：正在啟動 MiroFish 推演... [55 Agent 社群模擬] → 完成！
 
 MiroClaw 自動完成：啟動後端 → 建立知識圖譜 → 生成 55 個 Agent → 運行社群模擬 → 輸出預測報告。
 
-## 三層架構
+## 架構
 
 | 層級 | 技術 | 狀態 |
 |:---|:---|:---|
 | **推演層** | MiroFish Engine（GraphRAG + OASIS 多智能體模擬 + Report AI） | ✅ 已完成 |
 | **Agent 層** | OpenClaw Gateway Network（P2P 通訊、任務調度、Canvas 視覺化） | ✅ 已完成 |
-| **共識層** | Cosmos SDK AppChain（預測存證、信譽積分、零手續費） | 🚧 規劃中 |
 
 ## 快速開始：安裝到 OpenClaw
 
