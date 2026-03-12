@@ -1,5 +1,6 @@
 {
   "slug": "mirofish-predict",
   "version": "1.0.0",
-  "publishedAt": 1741622400000
+  "publishedAt": 1741622400000,
+  "acceptLicenseTerms": true
 }
