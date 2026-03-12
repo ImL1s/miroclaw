@@ -67,10 +67,13 @@ Paste this link in your OpenClaw chat — the Agent will auto-install:
 https://github.com/ImL1s/miro_claw
 ```
 
+> If auto-install doesn't work, use Method 2.
+
 **Method 2: CLI one-liner**
 
 ```bash
 openclaw skills install mirofish-predict
+openclaw gateway restart
 ```
 
 ### Set Up API Keys
@@ -86,6 +89,7 @@ Or manually edit `~/.mirofish/.env`:
 ```bash
 LLM_API_KEY=your-llm-api-key
 LLM_BASE_URL=http://your-llm-server:1234/v1
+LLM_MODEL_NAME=your-model-name          # Optional, defaults to API's default model
 ZEP_API_KEY=your-zep-cloud-key
 ```
 

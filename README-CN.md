@@ -67,10 +67,13 @@ MiroClaw 自动完成：启动后端 → 构建知识图谱 → 生成 55 个 Ag
 https://github.com/ImL1s/miro_claw
 ```
 
+> 如果没有自动安装，请用方法 2。
+
 **方法 2：CLI 一行安装**
 
 ```bash
 openclaw skills install mirofish-predict
+openclaw gateway restart
 ```
 
 ### 设置 API Key
@@ -86,6 +89,7 @@ openclaw skills install mirofish-predict
 ```bash
 LLM_API_KEY=your-llm-api-key
 LLM_BASE_URL=http://your-llm-server:1234/v1
+LLM_MODEL_NAME=your-model-name          # 选填，默认使用 API 默认模型
 ZEP_API_KEY=your-zep-cloud-key
 ```
 
