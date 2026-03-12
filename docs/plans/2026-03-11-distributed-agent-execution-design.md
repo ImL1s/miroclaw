@@ -81,3 +81,58 @@ Coordinator expects `RoundComplete` from all active Workers.
 | **3.5** | Static gRPC peer discovery | Reuse `peers.json` |
 | **4** | Checkpointing + Hard Timeouts | DB resilience, round-level saves, agent reassignment |
 | **5** | Fault tolerance + upstream PR | Agent migration, Result verification |
+
+## Usage Modes (End User)
+
+Users install the MiroFish skill into OpenClaw, then have three ways to use it:
+
+### 1. CLI Direct
+```bash
+mirofish predict "比特幣下週走勢" --rounds=10
+```
+User runs directly in terminal. Results printed on completion + desktop notification.
+
+### 2. OpenClaw Gateway RPC
+```bash
+openclaw gateway call mirofish.predict --params '{"topic": "..."}'
+# → {"runId": "run-xxx"}
+
+openclaw gateway call mirofish.status --params '{"runId": "run-xxx"}'
+openclaw gateway call mirofish.cancel --params '{"runId": "run-xxx"}'
+openclaw gateway call mirofish.list   --params '{}'
+```
+Non-blocking. Returns `runId` immediately. Poll status or receive SSE push events.
+
+### 3. Agent Auto-Trigger
+Agent detects prediction keywords in conversation → calls `mirofish_predict` tool → SSE broadcasts progress events → completion result returned to user automatically.
+
+> **User only needs:** Tell OpenClaw "install mirofish skill" → all three modes available. Infrastructure is handled internally.
+
+## Deployment Modes (Infrastructure)
+
+### 1. Single-Machine Docker Compose
+```bash
+docker compose up
+```
+Coordinator + Worker(s) on the same machine. Internal Docker network. Best for: local dev, demo.
+
+### 2. LAN Distributed (Multi-Machine)
+```bash
+# Machine A — Coordinator
+docker run -p 50051:50051 -v ./certs:/app/certs oasis-coordinator
+
+# Machine B, C — Workers
+docker run -e COORDINATOR_ADDR=192.168.x.x:50051 \
+  -v ./certs:/app/certs:ro oasis-worker
+```
+TLS + token auth (`MIROFISH_CLUSTER_TOKEN`). Best for: internal lab, multi-GPU split across machines.
+
+### 3. Native (No Docker)
+```bash
+# Terminal 1
+python3 scripts/run_coordinator.py
+
+# Terminal 2
+python3 scripts/run_worker.py --coordinator localhost:50051
+```
+Direct Python execution with manual dependency management. Best for: development, step-through debugging.
