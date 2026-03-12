@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="docs/logo.png" width="200" alt="MiroClaw Logo" />
+
 # MiroClaw
 
 **55 AI Agent Swarm Intelligence Prediction Engine — Standalone CLI · P2P Multi-Node Consensus**

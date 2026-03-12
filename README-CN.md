@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="docs/logo.png" width="200" alt="MiroClaw Logo" />
+
 # MiroClaw
 
 **55 AI Agent 群体智能预测引擎 — 单机推演 · P2P 多节点共识**
