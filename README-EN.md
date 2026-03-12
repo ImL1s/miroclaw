@@ -124,6 +124,58 @@ mirofish interview <sim_id> 0 "What's your take on this?"
 mirofish canvas <sim_id>
 ```
 
+## User-Facing Usage
+
+When you install the MiroFish skill into OpenClaw, all functionalities are automatically enabled without needing to understand the underlying infrastructure:
+
+### 1. Agent Auto-Trigger via Chat
+Simply type prediction keywords in the chat.
+> "Predict Bitcoin's trend next week" → Agent automatically calls the `mirofish_predict` tool → SSE pushes real-time progress → Returns the result upon completion.
+
+### 2. Gateway RPC
+Suitable for system integrations or external script calls.
+```bash
+openclaw gateway call mirofish.predict --params '{"topic": "..."}'
+# Returns immediately: {"runId": "run-xxx"}
+
+openclaw gateway call mirofish.status --params '{"runId": "run-xxx"}'
+```
+
+### 3. CLI operations
+Suitable for advanced developers.
+```bash
+mirofish predict "Bitcoin's trend next week"
+```
+(Prediction results are printed directly to the terminal, and system notifications are provided)
+
+## Infrastructure Deployment Modes
+
+We provide three underlying deployment modes to suit different team sizes:
+
+### 1. Single Machine Docker Compose (Default & Easiest)
+```bash
+docker compose up
+```
+Coordinator and Worker(s) run on the same machine. Ideal for local development and demos.
+
+### 2. LAN Distributed Deployment (Multi-Machine)
+Suitable for labs or teams looking to distribute GPU workloads.
+```bash
+# Node A — Coordinator
+docker run -p 50051:50051 -v ./certs:/app/certs oasis-coordinator
+
+# Nodes B, C — Workers
+docker run -e COORDINATOR_ADDR=192.168.x.x:50051 -v ./certs:/app/certs:ro oasis-worker
+```
+Secured via TLS and token authentication (`MIROFISH_CLUSTER_TOKEN`).
+
+### 3. Native Mode (No Docker)
+Suitable for Python developers to step-through debug.
+```bash
+python3 scripts/run_coordinator.py   # Terminal 1
+python3 scripts/run_worker.py --coordinator localhost:50051  # Terminal 2
+```
+
 ## P2P Distributed Prediction
 
 Multiple machines each run MiroFish independently, share results with each other, then merge into a consensus analysis.

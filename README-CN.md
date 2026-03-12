@@ -113,7 +113,6 @@ mirofish predict "主题" --p2p
 
 ### 互动功能
 
-```bash
 # 对报告追问
 mirofish chat <sim_id> "哪些 KOL 的观点最极端？"
 
@@ -122,6 +121,58 @@ mirofish interview <sim_id> 0 "你对这件事有什么看法？"
 
 # 可视化 Dashboard
 mirofish canvas <sim_id>
+```
+
+## 用户使用方式 (User-Facing)
+
+当您将 MiroFish skill 安装至 OpenClaw 后，所有功能自动启用，无需了解底层架构：
+
+### 1. Agent 自动触发对话
+直接在聊天中输入预测关键字。
+> 「帮我预测比特币下周走势」→ Agent 自动调用 `mirofish_predict` 工具 → SSE 实时推送进度 → 完成后回报结果。
+
+### 2. Gateway RPC
+适合系统集成或外部脚本调用。
+```bash
+openclaw gateway call mirofish.predict --params '{"topic": "..."}'
+# 立即返回 {"runId": "run-xxx"}
+
+openclaw gateway call mirofish.status --params '{"runId": "run-xxx"}'
+```
+
+### 3. CLI 命令行操作
+适合高级开发者。
+```bash
+mirofish predict "比特币下周走势"
+```
+（推演结果直接打印于终端，并提供系统通知）
+
+## 基础设施部署方式 (Infrastructure)
+
+针对不同团队规模，提供三种底层部署方式：
+
+### 1. 单机 Docker Compose (默认最简单)
+```bash
+docker compose up
+```
+Coordinator 与 Worker(s) 运行于同一台机器，适合本地开发与 Demo 呈现。
+
+### 2. LAN 局域网分布式部署 (多台机器)
+适合实验室、团队切分 GPU 负载的场景。
+```bash
+# 机器 A — Coordinator (调度中心)
+docker run -p 50051:50051 -v ./certs:/app/certs oasis-coordinator
+
+# 机器 B, C — Workers (执行节点)
+docker run -e COORDINATOR_ADDR=192.168.x.x:50051 -v ./certs:/app/certs:ro oasis-worker
+```
+具备 TLS 及 token (`MIROFISH_CLUSTER_TOKEN`) 安全连接防护。
+
+### 3. 原生模式 (无需 Docker)
+适合 Python 开发者单步追踪调试。
+```bash
+python3 scripts/run_coordinator.py   # 终端 1
+python3 scripts/run_worker.py --coordinator localhost:50051  # 终端 2
 ```
 
 ## P2P 分散式推演

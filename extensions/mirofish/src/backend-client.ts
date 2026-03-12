@@ -174,6 +174,118 @@ export async function getReport(simId: string): Promise<ReportResponse> {
 }
 
 /**
+ * Agent profile from a simulation.
+ */
+export interface AgentProfile {
+  id: number;
+  name: string;
+  persona: string;
+  age?: number;
+  gender?: string;
+  country?: string;
+  mbti?: string;
+}
+
+/**
+ * Get agent profiles for a simulation.
+ */
+export async function getSimulationAgents(
+  simId: string,
+  platform: string = "reddit",
+): Promise<{ success: boolean; agents?: AgentProfile[]; error?: string }> {
+  const url = `${getBaseUrl()}/api/simulation/${encodeURIComponent(simId)}/profiles?platform=${platform}`;
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(DATA_TIMEOUT_MS) });
+    if (!res.ok) {
+      return { success: false, error: `Backend HTTP ${res.status}` };
+    }
+    const json = (await res.json()) as {
+      success: boolean;
+      data?: { profiles: Array<Record<string, unknown>> };
+      error?: string;
+    };
+    if (!json.success || !json.data?.profiles) {
+      return { success: false, error: json.error || "No profiles found" };
+    }
+    const agents: AgentProfile[] = json.data.profiles.map((p, i) => ({
+      id: i,
+      name: (p.name as string) || `Agent ${i}`,
+      persona: ((p.persona as string) || "").slice(0, 200),
+      age: p.age as number | undefined,
+      gender: p.gender as string | undefined,
+      country: p.country as string | undefined,
+      mbti: p.mbti as string | undefined,
+    }));
+    return { success: true, agents };
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "TimeoutError") {
+      return { success: false, error: "Backend response timeout (30s)." };
+    }
+    throw err;
+  }
+}
+
+/**
+ * Get posts from a simulation (what agents said on social media).
+ */
+export async function getSimulationPosts(
+  simId: string,
+  platform: string = "twitter",
+  limit: number = 20,
+): Promise<{ success: boolean; posts?: Array<Record<string, unknown>>; total?: number; error?: string }> {
+  const url = `${getBaseUrl()}/api/simulation/${encodeURIComponent(simId)}/posts?platform=${platform}&limit=${limit}`;
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(DATA_TIMEOUT_MS) });
+    if (!res.ok) {
+      return { success: false, error: `Backend HTTP ${res.status}` };
+    }
+    const json = (await res.json()) as {
+      success: boolean;
+      data?: { posts: Array<Record<string, unknown>>; total: number };
+      error?: string;
+    };
+    if (!json.success || !json.data) {
+      return { success: false, error: json.error || "No posts found" };
+    }
+    return { success: true, posts: json.data.posts, total: json.data.total };
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "TimeoutError") {
+      return { success: false, error: "Backend response timeout (30s)." };
+    }
+    throw err;
+  }
+}
+
+/**
+ * Check if simulation environment is alive (can accept interview commands).
+ */
+export async function checkEnvAlive(
+  simId: string,
+): Promise<{ alive: boolean; twitter?: boolean; reddit?: boolean }> {
+  const url = `${getBaseUrl()}/api/simulation/env-status`;
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ simulation_id: simId }),
+      signal: AbortSignal.timeout(DATA_TIMEOUT_MS),
+    });
+    if (!res.ok) return { alive: false };
+    const json = (await res.json()) as {
+      success: boolean;
+      data?: { env_alive: boolean; twitter_available: boolean; reddit_available: boolean };
+    };
+    return {
+      alive: json.data?.env_alive ?? false,
+      twitter: json.data?.twitter_available,
+      reddit: json.data?.reddit_available,
+    };
+  } catch {
+    return { alive: false };
+  }
+}
+
+/**
  * Get report summary (truncated markdown for chat-friendly display).
  */
 export async function getReportSummary(

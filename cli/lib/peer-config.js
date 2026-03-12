@@ -17,6 +17,9 @@ const PEERS_FILE = path.join(MIROFISH_DIR, 'peers.json');
  * @typedef {Object} Peer
  * @property {string} id - 唯一 ID（hostname 或自定義名稱）
  * @property {string} endpoint - MiroFish API endpoint (http://host:port)
+ * @property {string} [grpc_addr] - gRPC address for distributed mode (host:port)
+ * @property {string} [role] - 'coordinator' | 'worker' (default: undefined)
+ * @property {string} [cluster_token] - Shared cluster authentication token
  * @property {number} addedAt - 加入時間戳
  * @property {string} [label] - 可選的顯示標籤
  * @property {boolean} [active] - 是否啟用
@@ -48,11 +51,26 @@ function savePeers(peers) {
 /**
  * 新增一個 peer
  * @param {string} endpoint - e.g. "http://192.168.1.100:5001"
- * @param {string} [label] - 可選標籤
+ * @param {string|object} [labelOrOpts] - 可選標籤 or options object
+ * @param {string} [labelOrOpts.label] - 顯示標籤
+ * @param {string} [labelOrOpts.grpc_addr] - gRPC address (host:port)
+ * @param {string} [labelOrOpts.role] - 'coordinator' | 'worker'
+ * @param {string} [labelOrOpts.cluster_token] - cluster auth token
  * @returns {Peer}
  */
-function addPeer(endpoint, label) {
+function addPeer(endpoint, labelOrOpts) {
     const peers = loadPeers();
+
+    // Support both addPeer(endpoint, label) and addPeer(endpoint, { label, grpc_addr, ... })
+    let label, grpc_addr, role, cluster_token;
+    if (typeof labelOrOpts === 'string') {
+        label = labelOrOpts;
+    } else if (typeof labelOrOpts === 'object' && labelOrOpts !== null) {
+        label = labelOrOpts.label;
+        grpc_addr = labelOrOpts.grpc_addr;
+        role = labelOrOpts.role;
+        cluster_token = labelOrOpts.cluster_token;
+    }
 
     // 正規化 endpoint（移除尾部 /）
     endpoint = endpoint.replace(/\/+$/, '');
@@ -79,6 +97,11 @@ function addPeer(endpoint, label) {
         addedAt: Date.now(),
         active: true,
     };
+
+    // Add optional gRPC fields
+    if (grpc_addr) peer.grpc_addr = grpc_addr;
+    if (role) peer.role = role;
+    if (cluster_token) peer.cluster_token = cluster_token;
 
     peers.push(peer);
     savePeers(peers);
@@ -148,11 +171,30 @@ async function checkAllPeersHealth() {
     return results;
 }
 
+/**
+ * 取得 coordinator 角色的 peer
+ * @returns {Peer|null}
+ */
+function getCoordinatorPeer() {
+    const peers = loadPeers();
+    return peers.find(p => p.role === 'coordinator' && p.active !== false) || null;
+}
+
+/**
+ * 取得所有 worker 角色的 peers
+ * @returns {Peer[]}
+ */
+function getWorkerPeers() {
+    return loadPeers().filter(p => p.role === 'worker' && p.active !== false);
+}
+
 module.exports = {
     addPeer,
     removePeer,
     getActivePeers,
     listPeers,
+    getCoordinatorPeer,
+    getWorkerPeers,
     checkPeerHealth,
     checkAllPeersHealth,
     PEERS_FILE,

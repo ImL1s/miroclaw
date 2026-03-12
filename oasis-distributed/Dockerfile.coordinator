@@ -1,0 +1,49 @@
+# ============= Stage 1: Builder =============
+# Poetry runs here ONLY to export requirements.txt
+FROM python:3.10-slim-bookworm AS builder
+
+RUN pip install --no-cache-dir "poetry==1.8.5"
+
+WORKDIR /app
+
+# Cache-friendly: copy dependency files first
+COPY pyproject.toml poetry.lock ./
+
+# Export to requirements.txt — no Poetry needed in runtime image
+RUN poetry export -f requirements.txt --only=main --without-hashes -o requirements.txt
+
+# ============= Stage 2: Runtime =============
+FROM python:3.10-slim-bookworm
+
+# OpenSSL for TLS cert generation, curl for health checks
+RUN apt-get update && apt-get install -y --no-install-recommends openssl curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Ensure oasis-distributed fork overrides pip-installed camel-oasis
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+
+# Install deps from exported requirements.txt (no Poetry in final image!)
+COPY --from=builder /app/requirements.txt .
+RUN apt-get update && apt-get install -y --no-install-recommends gcc python3-dev \
+    && pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir "grpcio>=1.76.0" "protobuf>=6.33.0" \
+    && find /usr/local/lib/python3.10/site-packages/camel/types/ -name '*.py' \
+       -exec sed -i 's/ChatCompletionMessageFunctionToolCall/ChatCompletionMessageToolCall/g' {} + \
+    && apt-get purge -y gcc python3-dev && apt-get autoremove -y \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy application code (after deps for better cache)
+COPY oasis/ oasis/
+COPY scripts/ scripts/
+COPY data/ data/
+
+# gRPC server port
+EXPOSE 50051
+
+# Cert volume mount point
+VOLUME ["/app/certs"]
+
+CMD ["python", "scripts/run_coordinator.py"]
