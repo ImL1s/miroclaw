@@ -8,7 +8,7 @@
  * - Windows: powershell toast
  * - OpenClaw Gateway: HTTP POST to message endpoint (optional)
  */
-const { execSync } = require('child_process');
+const { execFileSync } = require('child_process');
 const http = require('http');
 const https = require('https');
 const os = require('os');
@@ -26,7 +26,7 @@ function sendSystemNotification({ title, body, subtitle, url }) {
 
     try {
         if (platform === 'darwin') {
-            // macOS — osascript
+            // macOS — osascript (execFileSync avoids shell injection)
             const parts = [
                 `display notification "${escapeAppleScript(body)}"`,
                 `with title "${escapeAppleScript(title)}"`,
@@ -34,10 +34,10 @@ function sendSystemNotification({ title, body, subtitle, url }) {
             if (subtitle) {
                 parts.push(`subtitle "${escapeAppleScript(subtitle)}"`);
             }
-            execSync(`osascript -e '${parts.join(' ')}'`, { stdio: 'ignore' });
+            execFileSync('osascript', ['-e', parts.join(' ')], { stdio: 'ignore' });
         } else if (platform === 'linux') {
-            // Linux — notify-send
-            execSync(`notify-send "${escapeShell(title)}" "${escapeShell(body)}"`, { stdio: 'ignore' });
+            // Linux — notify-send (args as array, no shell)
+            execFileSync('notify-send', [title, body], { stdio: 'ignore' });
         } else if (platform === 'win32') {
             // Windows — powershell toast
             const ps = `
@@ -49,7 +49,7 @@ $textNodes.Item(1).AppendChild($template.CreateTextNode('${escapePS(body)}'))
 $toast = [Windows.UI.Notifications.ToastNotification]::new($template)
 [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('MiroFish').Show($toast)
             `.trim();
-            execSync(`powershell -Command "${ps}"`, { stdio: 'ignore' });
+            execFileSync('powershell', ['-Command', ps], { stdio: 'ignore' });
         }
     } catch {
         // Silent fail — notification is nice-to-have
@@ -59,11 +59,9 @@ $toast = [Windows.UI.Notifications.ToastNotification]::new($template)
     if (url) {
         try {
             if (platform === 'darwin') {
-                execSync(`open "${url}"`, { stdio: 'ignore' });
+                execFileSync('open', [url], { stdio: 'ignore' });
             } else if (platform === 'linux') {
-                execSync(`xdg-open "${url}"`, { stdio: 'ignore' });
-            } else if (platform === 'win32') {
-                execSync(`start "${url}"`, { stdio: 'ignore' });
+                execFileSync('xdg-open', [url], { stdio: 'ignore' });
             }
         } catch { /* ignore */ }
     }
@@ -115,8 +113,10 @@ async function sendGatewayNotification({ message, gatewayUrl }) {
  * @param {string} opts.simId - Simulation ID
  * @param {number} opts.sections - 報告章節數
  * @param {number} [opts.canvasPort] - Canvas server port
+ * @param {string} [opts.reportId] - Report ID
+ * @param {string} [opts.reportSummary] - Report summary text
  */
-async function notifyPredictionComplete({ topic, simId, sections, canvasPort }) {
+async function notifyPredictionComplete({ topic, simId, sections, canvasPort, reportId, reportSummary }) {
     const shortTopic = topic.length > 40 ? topic.slice(0, 40) + '…' : topic;
     const title = '🐟 MiroFish 推演完成';
     const body = `「${shortTopic}」推演已完成，產生了 ${sections} 個章節`;
@@ -131,18 +131,25 @@ async function notifyPredictionComplete({ topic, simId, sections, canvasPort }) 
     });
 
     // 2. OpenClaw Gateway notification (attempt, don't fail)
+    // Use user-friendly format — DC/TG users interact via agent, not CLI
+    const summaryBlock = reportSummary
+        ? reportSummary.split('\n').map(line => `> ${line}`).join('\n')
+        : '';
+
     const gatewayMsg = [
-        `## ${title}`,
+        `🐟 **MiroFish 推演完成**`,
         '',
-        body,
+        `> **主題:** ${shortTopic}`,
+        `> **Report ID:** \`${reportId || 'N/A'}\``,
+        `> **Simulation:** \`${simId}\``,
+        `> **章節數:** ${sections}`,
         '',
-        `**Simulation ID:** \`${simId}\``,
-        '',
-        '```bash',
-        `mirofish canvas ${simId}    # 開啟視覺化 Dashboard`,
-        `mirofish chat ${simId} "問題"  # 追問 Report Agent`,
-        '```',
-    ].join('\n');
+        summaryBlock ? `📋 **報告摘要:**\n${summaryBlock}\n` : '',
+        `💬 **想了解更多？** 直接在聊天中提問即可，例如：`,
+        `• 「這個推演的主要結論是什麼？」`,
+        `• 「哪些風險最需要注意？」`,
+        `• 「各方利益相關者的反應如何？」`,
+    ].filter(Boolean).join('\n');
 
     const gatewaySent = await sendGatewayNotification({ message: gatewayMsg });
     if (gatewaySent) {
@@ -156,10 +163,6 @@ async function notifyPredictionComplete({ topic, simId, sections, canvasPort }) 
 
 function escapeAppleScript(str) {
     return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-}
-
-function escapeShell(str) {
-    return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\$/g, '\\$').replace(/`/g, '\\`').replace(/\n/g, ' ');
 }
 
 function escapePS(str) {

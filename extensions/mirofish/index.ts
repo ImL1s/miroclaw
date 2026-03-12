@@ -17,6 +17,7 @@ import { registerGatewayMethods } from "./src/gateway.js";
 import { registerCanvasRoute } from "./src/canvas-route.js";
 import { createProgressBroadcaster } from "./src/progress-broadcaster.js";
 import { registerPeerDiscovery } from "./src/peer-discovery.js";
+import { ChatSessionManager } from "./src/chat-session.js";
 
 // Minimal type definitions (will be replaced by openclaw SDK types later)
 interface PluginApi {
@@ -59,8 +60,11 @@ const plugin = {
       log,
     });
 
+    // Chat session manager (shared by tools and gateway)
+    const chatSessions = new ChatSessionManager();
+
     // Path C: Agent tools
-    const tools = createMirofishTools(runManager, log);
+    const tools = createMirofishTools(runManager, log, chatSessions);
     for (const tool of tools) {
       api.registerTool(tool);
     }
@@ -70,7 +74,7 @@ const plugin = {
     api.registerHook("agent_end", hook, { name: "mirofish-auto-predict" });
 
     // Gateway RPC methods (pass config for Discord webhook etc.)
-    registerGatewayMethods(api, runManager, log, config);
+    registerGatewayMethods(api, runManager, log, config, chatSessions);
 
     // SSE Progress Broadcaster (real-time event push)
     const broadcaster = createProgressBroadcaster(log);
@@ -111,6 +115,7 @@ const plugin = {
       stop() {
         runManager.cleanup();
         broadcaster.closeAll();
+        chatSessions.clearAll();
         log.info("[MiroFish] RunManager stopped, orphan processes cleaned.");
       },
     });

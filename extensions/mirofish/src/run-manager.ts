@@ -47,6 +47,7 @@ export interface RunManager {
   cancel(runId: string): boolean;
   cleanup(): void;
   getActiveRuns(): Map<string, ActiveRun>;
+  getCompletedRun(runId: string): CompletedRun | null;
   _activeRuns: Map<string, ActiveRun>;
 }
 
@@ -59,6 +60,14 @@ interface DedupeEntry {
 interface CacheEntry {
   reportId: string;
   timestamp: number;
+}
+
+export interface CompletedRun {
+  runId: string;
+  topic: string;
+  simId: string;
+  reportId: string;
+  completedAt: number;
 }
 
 // ── Factory ────────────────────────────────────────────────────
@@ -74,6 +83,8 @@ export function createRunManager(config: RunManagerConfig): RunManager {
   } = config;
 
   const activeRuns = new Map<string, ActiveRun>();
+  const completedRuns = new Map<string, CompletedRun>();
+  const MAX_COMPLETED = 20;
   const dedupeMap = new Map<string, DedupeEntry>();
   const resultCache = new Map<string, CacheEntry>();
 
@@ -200,8 +211,32 @@ export function createRunManager(config: RunManagerConfig): RunManager {
             event.runId !== currentRunId
           ) {
             const realRunId = event.runId;
+            currentRunId = realRunId;
             // Keep temp key as primary, add real key as alias
             activeRuns.set(realRunId, run);
+          }
+
+          // Track completed runs so status queries work after process exit
+          if (event.event === "run:done") {
+            const completed: CompletedRun = {
+              runId: currentRunId,
+              topic,
+              simId: (event.simId as string) || "",
+              reportId: (event.reportId as string) || "",
+              completedAt: Date.now(),
+            };
+            completedRuns.set(tempRunId, completed);
+            if (typeof event.runId === "string" && event.runId !== tempRunId) {
+              completedRuns.set(event.runId, completed);
+            }
+            // Evict oldest if over limit
+            if (completedRuns.size > MAX_COMPLETED * 2) {
+              const entries = [...completedRuns.entries()]
+                .sort((a, b) => a[1].completedAt - b[1].completedAt);
+              for (let i = 0; i < entries.length - MAX_COMPLETED; i++) {
+                completedRuns.delete(entries[i][0]);
+              }
+            }
           }
 
           opts.onEvent(event);
@@ -280,12 +315,17 @@ export function createRunManager(config: RunManagerConfig): RunManager {
     }
 
     activeRuns.clear();
+    completedRuns.clear();
     dedupeMap.clear();
     resultCache.clear();
   }
 
   function getActiveRuns(): Map<string, ActiveRun> {
     return activeRuns;
+  }
+
+  function getCompletedRun(runId: string): CompletedRun | null {
+    return completedRuns.get(runId) ?? null;
   }
 
   // ── Public interface ───────────────────────────────────────
@@ -300,6 +340,7 @@ export function createRunManager(config: RunManagerConfig): RunManager {
     cancel,
     cleanup,
     getActiveRuns,
+    getCompletedRun,
     _activeRuns: activeRuns,
   };
 }

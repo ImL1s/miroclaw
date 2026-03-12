@@ -16,6 +16,9 @@ const MAX_POLL_MINUTES = 60;
 
 async function predict(seedText, opts = {}) {
     const rounds = opts.rounds || 20;
+    const distributed = opts.distributed || false;
+    const workers = opts.workers || 2;
+    const mode = opts.mode || 'docker';
     const jsonStream = opts.jsonStream ? wrapWithJsonStream() : null;
     let currentStep = 0;
 
@@ -192,13 +195,39 @@ async function predict(seedText, opts = {}) {
     // Step 5: Start simulation
     currentStep = 5;
     if (jsonStream) jsonStream.stepStart(5);
-    console.log(`\n🚀 Step 5/7: Starting simulation (${rounds} rounds)...`);
-    await request('POST', '/api/simulation/start', {
-        simulation_id: simId,
-        max_rounds: rounds,
-    });
-    console.log('   Simulation started. This may take 10-30 minutes.');
-    if (jsonStream) jsonStream.stepDone(5, { started: true, rounds });
+    if (distributed) {
+        if (mode === 'native') {
+            const peerConfig = require('./peer-config.js');
+            const coordPeer = peerConfig.getCoordinatorPeer();
+            const coordinatorAddr = coordPeer ? coordPeer.grpc_addr : 'localhost:50051';
+            const clusterToken = coordPeer ? coordPeer.cluster_token || '' : '';
+            console.log(`\n🚀 Step 5/7: Starting NATIVE distributed simulation...`);
+            console.log(`   Coordinator: ${coordinatorAddr}`);
+            await request('POST', '/api/simulation/distributed/start-native', {
+                simulation_id: simId,
+                coordinator_addr: coordinatorAddr,
+                cluster_token: clusterToken,
+                max_rounds: rounds,
+            });
+            console.log('   Native worker started, connecting to remote coordinator.');
+        } else {
+            console.log(`\n🚀 Step 5/7: Starting DISTRIBUTED simulation (${rounds} rounds, ${workers} workers)...`);
+            await request('POST', '/api/simulation/distributed/start', {
+                simulation_id: simId,
+                num_workers: workers,
+                max_rounds: rounds,
+            });
+            console.log('   Distributed cluster started. This may take 15-60 minutes.');
+        }
+    } else {
+        console.log(`\n🚀 Step 5/7: Starting simulation (${rounds} rounds)...`);
+        await request('POST', '/api/simulation/start', {
+            simulation_id: simId,
+            max_rounds: rounds,
+        });
+        console.log('   Simulation started. This may take 10-30 minutes.');
+    }
+    if (jsonStream) jsonStream.stepDone(5, { started: true, rounds, distributed });
 
     // Step 6: Poll status
     currentStep = 6;
@@ -208,11 +237,21 @@ async function predict(seedText, opts = {}) {
     for (let i = 0; i < maxPolls; i++) {
         await new Promise(r => setTimeout(r, POLL_INTERVAL));
         try {
-            const statusRes = await request('GET', `/api/simulation/${simId}/run-status`);
-            const statusData = statusRes.data || statusRes;
-            const runnerStatus = statusData.runner_status || statusData.status;
-            const progress = statusData.progress || '';
-            process.stdout.write(`\r   Status: ${runnerStatus} ${progress}    `);
+            let statusRes, statusData, runnerStatus, progress;
+            if (distributed) {
+                statusRes = await request('POST', '/api/simulation/distributed/status', {
+                    simulation_id: simId,
+                });
+                statusData = statusRes.data || statusRes;
+                runnerStatus = statusData.runner_status || statusData.status;
+                progress = statusData.progress_percent || '';
+            } else {
+                statusRes = await request('GET', `/api/simulation/${simId}/run-status`);
+                statusData = statusRes.data || statusRes;
+                runnerStatus = statusData.runner_status || statusData.status;
+                progress = statusData.progress || '';
+            }
+            process.stdout.write(`\r   Status: ${runnerStatus} ${progress}%    `);
             if (jsonStream) jsonStream.stepProgress(6, parseFloat(progress) / 100 || 0, runnerStatus);
 
             if (runnerStatus === 'completed' || runnerStatus === 'finished') {
@@ -280,11 +319,18 @@ async function predict(seedText, opts = {}) {
 
     // Notification
     const sectionCount = reportData.outline?.sections?.length || 0;
+    const reportId = reportData.id || reportData.report_id || '';
+    // Extract first ~500 chars as summary for notification
+    const rawContent = reportData.markdown_content || formatted;
+    const summaryLines = rawContent.split('\n').slice(0, 15).join('\n');
+    const reportSummary = summaryLines.length > 500 ? summaryLines.slice(0, 500) + '…' : summaryLines;
     await notifyPredictionComplete({
         topic: seedText,
         simId,
         sections: sectionCount,
         canvasPort: opts.canvas ? (opts.canvasPort || 18790) : null,
+        reportId,
+        reportSummary,
     });
 
     console.log(`\nSimulation ID: ${simId}`);

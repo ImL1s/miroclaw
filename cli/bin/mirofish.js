@@ -36,6 +36,9 @@ Usage:
   mirofish predict "topic"          Full prediction pipeline (auto-starts backend)
     --rounds=20                     Number of simulation rounds (default: 20)
     --platform=parallel             Platform: twitter|reddit|parallel (default: parallel)
+    --distributed                   Use distributed multi-node simulation
+    --workers=2                     Number of worker nodes (default: 2, with --distributed)
+    --mode=docker                   Distributed mode: docker|native (default: docker)
     --canvas                        Auto-open Canvas Dashboard after completion
     --p2p                           Broadcast seed & results to peers
     --json-stream                   Emit NDJSON progress events to stdout
@@ -121,6 +124,9 @@ async function main() {
                     canvas: args.includes('--canvas'),
                     canvasPort: flags.port ? parseInt(flags.port) : 18790,
                     jsonStream: jsonStreamMode,
+                    distributed: args.includes('--distributed'),
+                    workers: flags.workers ? parseInt(flags.workers) : 2,
+                    mode: flags.mode || 'docker',
                 });
 
                 // P2P: 推演完成後廣播結果給 peers
