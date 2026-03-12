@@ -64,7 +64,7 @@ MiroClaw automatically: starts the backend → builds a knowledge graph → spaw
 Paste this link in your OpenClaw chat — the Agent will auto-install:
 
 ```
-https://github.com/ImL1s/miro_claw
+https://github.com/ImL1s/miroclaw
 ```
 
 > If auto-install doesn't work, use Method 2.
@@ -99,7 +99,7 @@ ZEP_API_KEY=your-zep-cloud-key
 <summary>Manual Installation (Developer Mode)</summary>
 
 ```bash
-git clone --recursive https://github.com/ImL1s/miro_claw.git
+git clone --recursive https://github.com/ImL1s/miroclaw.git
 cd miro_claw
 git clone https://github.com/666ghj/MiroFish.git
 

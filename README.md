@@ -64,7 +64,7 @@ MiroClaw 自動完成：啟動後端 → 建立知識圖譜 → 生成 55 個 Ag
 在 OpenClaw 聊天中直接貼上這個連結，Agent 會自動完成安裝：
 
 ```
-https://github.com/ImL1s/miro_claw
+https://github.com/ImL1s/miroclaw
 ```
 
 > 如果沒有自動安裝，請用方法 2。
@@ -99,7 +99,7 @@ ZEP_API_KEY=your-zep-cloud-key
 <summary>手動安裝（開發者模式）</summary>
 
 ```bash
-git clone --recursive https://github.com/ImL1s/miro_claw.git
+git clone --recursive https://github.com/ImL1s/miroclaw.git
 cd miro_claw
 git clone https://github.com/666ghj/MiroFish.git
 
