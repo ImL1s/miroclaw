@@ -21,9 +21,9 @@
 
 <div align="center">
 
-[![MiroFish Discord Demo](docs/mirofish-discord-full-demo.gif)](https://github.com/ImL1s/miro_claw/releases/download/v0.4.0-demo/mirofish-discord-demo.mp4)
+![MiroClaw Demo](docs/mirofish-demo.gif)
 
-*👆 點擊 GIF 觀看完整 Demo 影片 — 透過 Discord 對話觸發 55 Agent 推演*
+*55 AI Agent 群體智能推演 — 從對話到預測報告*
 
 </div>
 
