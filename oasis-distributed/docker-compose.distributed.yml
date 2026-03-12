@@ -31,12 +31,14 @@ services:
       - LLM_MODEL_NAME=${LLM_MODEL_NAME:-}
     networks:
       - distributed-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     healthcheck:
-      test: ["CMD", "python", "-c", "import grpc; ch=grpc.insecure_channel('localhost:50051'); grpc.channel_ready_future(ch).result(timeout=2)"]
+      test: ["CMD", "python", "-c", "import socket; s=socket.socket(); s.settimeout(2); s.connect(('localhost',50051)); s.close()"]
       interval: 5s
       timeout: 3s
-      retries: 5
-      start_period: 15s
+      retries: 10
+      start_period: 30s
 
   # ── Worker (scalable) ──────────────────────────────
   # Use: docker compose up --scale worker=N
@@ -62,6 +64,8 @@ services:
       # WORKER_ID will be auto-set from hostname if not provided
     networks:
       - distributed-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
 volumes:
   tls-certs:
