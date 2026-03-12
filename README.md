@@ -21,11 +21,9 @@
 
 <div align="center">
 
-https://github.com/ImL1s/miro_claw/releases/download/v0.4.0-demo/mirofish-discord-demo.mp4
+[![MiroFish Discord Demo](docs/mirofish-discord-full-demo.gif)](https://github.com/ImL1s/miro_claw/releases/download/v0.4.0-demo/mirofish-discord-demo.mp4)
 
-*透過 Discord 對話觸發 55 Agent 推演，即時推播進度，自動產出預測報告*
-
-> 如果影片無法自動播放，[點此觀看](https://github.com/ImL1s/miro_claw/releases/download/v0.4.0-demo/mirofish-discord-demo.mp4)
+*👆 點擊 GIF 觀看完整 Demo 影片 — 透過 Discord 對話觸發 55 Agent 推演*
 
 </div>
 
