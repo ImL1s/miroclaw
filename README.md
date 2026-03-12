@@ -130,11 +130,14 @@ mirofish canvas <sim_id>
 ### 1. Agent 自動觸發對話
 直接在聊天中輸入預測關鍵字。
 > 「幫我預測比特幣下週走勢」→ Agent 自動呼叫 `mirofish_predict` 工具 → SSE 即時推播進度 → 完成後回報結果。
+> 「用分散式模擬預測 ETH 走勢，3 個 worker」→ Agent 呼叫 `mirofish_predict({ distributed: true, workers: 3 })`
 
 ### 2. Gateway RPC
 適合系統整合或外部腳本呼叫。
 ```bash
 openclaw gateway call mirofish.predict --params '{"topic": "..."}'
+# 分散式預測
+openclaw gateway call mirofish.predict --params '{"topic": "...", "distributed": true, "workers": 3}'
 # 立即回傳 {"runId": "run-xxx"}
 
 openclaw gateway call mirofish.status --params '{"runId": "run-xxx"}'
@@ -144,6 +147,8 @@ openclaw gateway call mirofish.status --params '{"runId": "run-xxx"}'
 適合進階開發者。
 ```bash
 mirofish predict "比特幣下週走勢"
+# 分散式預測
+mirofish predict "比特幣下週走勢" --distributed --workers=3
 ```
 （推演結果直接印於終端機，並提供系統通知）
 
@@ -237,6 +242,7 @@ P2P_AUTO_PREDICT=true
 |:---|:---|
 | `mirofish predict "主題"` | 完整推演（自動啟動後端） |
 | `mirofish predict "主題" --rounds=10` | 指定推演輪數 |
+| `mirofish predict "主題" --distributed --workers=3` | 分散式推演（Docker/Native） |
 | `mirofish predict "主題" --p2p` | P2P 分散推演 |
 | `mirofish predict "主題" --canvas` | 推演後自動開啟 Dashboard |
 | `mirofish predict "主題" --json-stream` | NDJSON 輸出（供 Extension 使用） |
@@ -268,6 +274,7 @@ cd extensions/mirofish && npm install && npx tsc
 
 # 透過 Gateway RPC 測試
 openclaw gateway call mirofish.predict --params '{"topic": "推演主題"}'
+openclaw gateway call mirofish.predict --params '{"topic": "...", "distributed": true, "workers": 3}'
 openclaw gateway call mirofish.status --params '{"runId": "run-xxx"}'
 openclaw gateway call mirofish.list --params '{}'
 ```

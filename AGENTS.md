@@ -17,9 +17,10 @@ End users install the MiroFish skill into OpenClaw once — all capabilities act
 | Capability | How the user triggers it |
 |:-----------|:------------------------|
 | **Prediction** | Tell the Agent: "幫我預測比特幣走勢" → auto-calls `mirofish_predict` |
+| **Distributed** | Tell the Agent: "用分散式模擬預測 ETH 走勢，3 個 worker" → auto-calls `mirofish_predict({ distributed: true, workers: 3 })` |
 | **Status check** | "那個預測跑到哪了？" → calls `mirofish_status` |
-| **Gateway RPC** | `openclaw gateway call mirofish.predict --params '{"topic": "..."}' ` |
-| **CLI direct** | `mirofish predict "Topic"` (for developers/advanced users) |
+| **Gateway RPC** | `openclaw gateway call mirofish.predict --params '{"topic": "...", "distributed": true, "workers": 3}' ` |
+| **CLI direct** | `mirofish predict "Topic" --distributed --workers=3` (for developers/advanced users) |
 
 The extension auto-registers: 2 agent tools, 4 gateway RPCs, SSE progress push, Canvas visualization, message hooks, and P2P peer discovery. **Users don't need to know about Docker, gRPC, or Coordinators.**
 
@@ -28,7 +29,8 @@ The extension auto-registers: 2 agent tools, 4 gateway RPCs, SSE progress push, 
 ### CLI (Node.js, zero runtime deps)
 ```bash
 node cli/bin/mirofish.js predict "Topic" --rounds=10        # Full pipeline
-node cli/bin/mirofish.js predict "Topic" --p2p               # Distributed
+node cli/bin/mirofish.js predict "Topic" --distributed       # Distributed simulation (Docker/Native)
+node cli/bin/mirofish.js predict "Topic" --p2p               # P2P broadcast and simulate
 node cli/bin/mirofish.js predict "Topic" --json-stream       # NDJSON output for extension IPC
 node cli/bin/mirofish.js meta "Topic"                        # P2P consensus merge
 node cli/bin/mirofish.js canvas <sim_id>                     # Visual dashboard
