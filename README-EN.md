@@ -17,6 +17,10 @@ English | [简体中文](./README-CN.md) | [繁體中文](./README.md)
 
 ---
 
+## Demo
+
+https://github.com/ImL1s/miro_claw/releases/download/v0.4.0-demo/mirofish-discord-demo.mp4
+
 ## What is this?
 
 MiroClaw wraps [MiroFish](https://github.com/666ghj/MiroFish) (a simulation engine where 55 AI Agents interact on simulated social platforms) into a CLI tool and an [OpenClaw](https://openclaw.ai) extension, enabling swarm intelligence predictions with a single command.

@@ -168,4 +168,5 @@ function groupSectionsByTheme(sections) {
 module.exports = {
     mergeReports,
     formatMetaReport,
+    parseMarkdownSections,
 };

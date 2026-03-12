@@ -83,11 +83,42 @@ const EMPTY_REPORT = {
     report: { status: 'pending' },
 };
 
+// --- markdown_content 格式的報告（現版）---
+const REPORT_MD_A = {
+    node: 'node-md-a',
+    simulation_id: 'sim_010',
+    topic: 'ETH 突破 $10,000',
+    report: {
+        markdown_content: '# ETH 分析報告\n\n## 市場影響\n\nETH 突破萬元引發 DeFi 復興。\n\n## 監管反應\n\nSEC 對 ETH ETF 態度轉正。',
+        status: 'completed',
+    }
+};
+
+const REPORT_MD_B = {
+    node: 'node-md-b',
+    simulation_id: 'sim_011',
+    topic: 'ETH 突破 $10,000',
+    report: {
+        markdown_content: '# ETH 情境推演\n\n## 技術面分析\n\n鏈上活躍地址破 100 萬。\n\n## 機構動向\n\nBlackRock 加碼 ETH 配置。',
+        status: 'completed',
+    }
+};
+
+const REPORT_MD_NO_HEADERS = {
+    node: 'node-md-c',
+    simulation_id: 'sim_012',
+    topic: 'ETH 突破 $10,000',
+    report: {
+        markdown_content: '這是一份沒有標題的簡短報告。ETH 很棒。',
+        status: 'completed',
+    }
+};
+
 
 function runTests() {
     console.log('\n🧪 meta-report.js tests\n');
 
-    // --- mergeReports ---
+    // --- mergeReports: outline.sections 格式 ---
     test('mergeReports: merges 2 reports into meta-report', () => {
         const meta = metaReport.mergeReports([REPORT_A, REPORT_B]);
         assert.ok(meta.topic, 'should have topic');
@@ -118,6 +149,47 @@ function runTests() {
     test('mergeReports: handles empty input', () => {
         const meta = metaReport.mergeReports([]);
         assert.strictEqual(meta.nodeCount, 0);
+    });
+
+    // --- mergeReports: markdown_content 格式 ---
+    test('mergeReports: merges markdown_content format reports', () => {
+        const meta = metaReport.mergeReports([REPORT_MD_A, REPORT_MD_B]);
+        assert.strictEqual(meta.nodeCount, 2);
+        assert.ok(meta.sections.length >= 4, `should have 4+ sections, got ${meta.sections.length}`);
+        assert.ok(meta.sections.some(s => s.title === '市場影響'));
+        assert.ok(meta.sections.some(s => s.title === '技術面分析'));
+        assert.ok(meta.sections.some(s => s.source === 'node-md-a'));
+        assert.ok(meta.sections.some(s => s.source === 'node-md-b'));
+    });
+
+    test('mergeReports: handles markdown without ## headers', () => {
+        const meta = metaReport.mergeReports([REPORT_MD_NO_HEADERS]);
+        assert.strictEqual(meta.nodeCount, 1);
+        assert.ok(meta.sections.length >= 1, 'should create fallback section');
+    });
+
+    test('mergeReports: mixes outline + markdown formats', () => {
+        const meta = metaReport.mergeReports([REPORT_A, REPORT_MD_A]);
+        assert.strictEqual(meta.nodeCount, 2);
+        assert.ok(meta.sections.some(s => s.source === 'node-a'));
+        assert.ok(meta.sections.some(s => s.source === 'node-md-a'));
+    });
+
+    // --- parseMarkdownSections ---
+    test('parseMarkdownSections: splits on ## headers', () => {
+        const sections = metaReport.parseMarkdownSections(
+            '# Title\n\n## Section A\n\nContent A\n\n## Section B\n\nContent B'
+        );
+        assert.strictEqual(sections.length, 2);
+        assert.strictEqual(sections[0].title, 'Section A');
+        assert.ok(sections[0].content.includes('Content A'));
+        assert.strictEqual(sections[1].title, 'Section B');
+    });
+
+    test('parseMarkdownSections: fallback for no ## headers', () => {
+        const sections = metaReport.parseMarkdownSections('Just plain text.');
+        assert.strictEqual(sections.length, 1);
+        assert.ok(sections[0].content.includes('Just plain text.'));
     });
 
     // --- formatMetaReport ---

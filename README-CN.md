@@ -17,6 +17,10 @@
 
 ---
 
+## Demo
+
+https://github.com/ImL1s/miro_claw/releases/download/v0.4.0-demo/mirofish-discord-demo.mp4
+
 ## 这是什么？
 
 MiroClaw 把 [MiroFish](https://github.com/666ghj/MiroFish)（55 个 AI Agent 在模拟社群平台上互动的推演引擎）包装成 CLI 工具和 [OpenClaw](https://openclaw.ai) 扩展，让你一行命令就能启动群体智能推演。
