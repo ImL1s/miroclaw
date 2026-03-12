@@ -8,6 +8,21 @@ MiroClaw integrates [MiroFish](https://github.com/666ghj/MiroFish) (55 AI Agent 
 
 **Three layers**: MiroFish Engine (GraphRAG + OASIS simulation) → OpenClaw Gateway (P2P, task dispatch) → Optional Cosmos SDK AppChain (on-chain attestation).
 
+**Distributed**: 55 agents can be split across multiple machines via `oasis-distributed/` (gRPC + Docker).
+
+## User-Facing Usage
+
+End users install the MiroFish skill into OpenClaw once — all capabilities activate automatically:
+
+| Capability | How the user triggers it |
+|:-----------|:------------------------|
+| **Prediction** | Tell the Agent: "幫我預測比特幣走勢" → auto-calls `mirofish_predict` |
+| **Status check** | "那個預測跑到哪了？" → calls `mirofish_status` |
+| **Gateway RPC** | `openclaw gateway call mirofish.predict --params '{"topic": "..."}' ` |
+| **CLI direct** | `mirofish predict "Topic"` (for developers/advanced users) |
+
+The extension auto-registers: 2 agent tools, 4 gateway RPCs, SSE progress push, Canvas visualization, message hooks, and P2P peer discovery. **Users don't need to know about Docker, gRPC, or Coordinators.**
+
 ## Development Commands
 
 ### CLI (Node.js, zero runtime deps)
@@ -97,6 +112,19 @@ Supporting modules:
 - `src/backend-client.ts` — Direct HTTP client to Flask backend (uses Node 22+ native fetch)
 - `src/chat-session.ts` — Per-simulation chat history (max 20 messages, used by tools + gateway)
 
+### Distributed Layer (`oasis-distributed/`) — Python, gRPC
+Splits 55 OASIS agents across multiple machines. Coordinator keeps Platform (SQLite + RecSys) centralized; Workers run LLM calls remotely.
+
+- `oasis/network/channel_server.py` — gRPC server: Register, Heartbeat, WaitForRound, GetContext, SendAction, RoundComplete, Unregister
+- `oasis/network/channel_client.py` — Worker-side gRPC client (`WorkerNetworkChannel`)
+- `oasis/network/worker_runtime.py` — Worker agent execution loop + graceful shutdown
+- `oasis/network/safe_pickle.py` — `RestrictedUnpickler` (security: blocks arbitrary code execution via pickle payloads)
+- `oasis/network/proto/channel.proto` — 7 RPCs defining Coordinator↔Worker contract
+- `Dockerfile.coordinator` — Multi-stage build (Poetry export → slim runtime, camel-ai compat patch)
+- `Dockerfile.worker` — Slim image with only grpcio + protobuf
+- `docker-compose.distributed.yml` — Full stack: 1 Coordinator + N Workers
+- Tests: `python3.11 -m pytest tests/ -v` (45 tests)
+
 ### MiroFish Backend (Git Submodule) — Python Flask
 - 4 Blueprints: `graph`, `simulation`, `report`, `p2p`
 - In-memory stores with `threading.Lock` (data lost on restart)
@@ -127,6 +155,26 @@ These patterns are specific to OpenClaw and not obvious from types:
 | `P2P_AUTO_PREDICT` | Backend | `true` to auto-run predictions on received seeds |
 | `OPENCLAW_GATEWAY_URL` | CLI | Gateway URL for push notifications (default: `http://localhost:18787`) |
 | `MIROFISH_DISCORD_WEBHOOK` | Extension | Discord webhook URL for run notifications |
+| `MIROFISH_CLUSTER_TOKEN` | Distributed | Pre-shared token for gRPC auth between Coordinator and Workers |
+| `COORDINATOR_ADDR` | Worker | Coordinator gRPC address (default: `localhost:50051`) |
+
+## Deployment Modes
+
+### 1. Single Machine (Default)
+Extension spawns CLI → CLI auto-starts Docker backend → everything local. No config needed.
+
+### 2. Docker Compose Distributed
+```bash
+cd oasis-distributed && docker compose -f docker-compose.distributed.yml up
+```
+Coordinator + Workers on same or different machines. TLS + token auth.
+
+### 3. Native (No Docker)
+```bash
+python3 scripts/run_coordinator.py   # Terminal 1
+python3 scripts/run_worker.py        # Terminal 2
+```
+For development and step-through debugging.
 
 ## Conventions
 
