@@ -120,6 +120,7 @@ mirofish predict "主题" --p2p
 
 ### 互动功能
 
+```bash
 # 对报告追问
 mirofish chat <sim_id> "哪些 KOL 的观点最极端？"
 
@@ -321,9 +322,11 @@ miro_claw/
 │   ├── lib/                    # 核心模块：predict, docker, api, p2p, notify, canvas
 │   ├── canvas/                 # Canvas Dashboard（HTML + JS + CSS）
 │   └── test/                   # 单元测试 + E2E (e2e-p2p.sh)
+├── core/                       # 共用类型与常量 (@mirofish/core)
 ├── extensions/mirofish/        # OpenClaw Extension (TypeScript)
 │   ├── index.ts                # 插件入口 — 6 个集成点
 │   └── src/                    # RunManager, tools, hooks, gateway, SSE, chat
+├── oasis-distributed/          # 分布式 Agent 执行层 (gRPC, Docker)
 ├── skills/mirofish-predict/    # OpenClaw Skill 定义 (SKILL.md)
 ├── MiroFish/                   # 核心引擎 — 需手动 clone (Python Flask + Vue 3)
 ├── docs/                       # 愿景、阶段计划、分布式设计文档

@@ -322,9 +322,11 @@ miro_claw/
 │   ├── lib/                    # Core: predict, docker, api, p2p, notify, canvas
 │   ├── canvas/                 # Canvas Dashboard (HTML + JS + CSS)
 │   └── test/                   # Unit tests + E2E (e2e-p2p.sh)
+├── core/                       # Shared types & constants (@mirofish/core)
 ├── extensions/mirofish/        # OpenClaw Extension (TypeScript)
 │   ├── index.ts                # Plugin entry — 6 integration points
 │   └── src/                    # RunManager, tools, hooks, gateway, SSE, chat
+├── oasis-distributed/          # Distributed Agent execution layer (gRPC, Docker)
 ├── skills/mirofish-predict/    # OpenClaw Skill definition (SKILL.md)
 ├── MiroFish/                   # Core Engine — clone separately (Python Flask + Vue 3)
 ├── docs/                       # Vision, phase plans, distributed design docs
